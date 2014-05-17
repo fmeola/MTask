@@ -1,0 +1,1198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<meta content="text/html; charset=ISO-8859-1" http-equiv="content-type"><title>MTask</title></head><body>
+<div style="text-align: center;">
+<h1><small><small><span style="font-family: Verdana;"><span style="font-weight: bold;">MTask - Multitarea para i386.<br>
+</span><span style="font-style: italic; font-weight: normal;">Ing. H. E. Etchegoyen</span><br style="font-style: italic; font-weight: normal;">
+<span style="font-style: italic; font-weight: normal;">Cátedra de Sistemas Operativos</span><br style="font-style: italic; font-weight: normal;">
+<span style="font-style: italic; font-weight: normal;">ITBA</span><span style="font-weight: bold;"><br>
+</span></span>
+<span style="font-family: Verdana;"></span></small></small></h1>
+</div>
+<span style="font-family: Verdana;"></span>
+<h1><small><small><span style="font-family: Verdana;">Indice</span></small></small><br>
+</h1>
+<div style="margin-left: 40px;"><span style="font-family: Verdana;"><a href="#Generalidades">Generalidades</a></span><br>
+<span style="font-family: Verdana;">
+<a href="#Planificaci%F3n_scheduling">Planificación (scheduling)</a></span><br>
+<span style="font-family: Verdana;"><a href="#Implementaci%F3n_y_limitaciones">Implementación y limitaciones</a></span><br>
+<span style="font-family: Verdana;"><a href="#Distribuci%F3n_y_sistema_de_desarrollo">Distribución y sistema de desarrollo</a></span><br>
+<span style="font-family: Verdana;"><a href="#Fuentes_en_assembler">Fuentes en assembler</a><br>
+<a href="#Algunos_detalles_de_implementaci%F3n">Algunos detalles de implementación</a></span><br>
+<span style="font-family: Verdana;"><a href="#API_principal">API principal</a></span><br>
+<span style="font-family: Verdana;"><a href="#Manejo_del_coprocesador_aritm%E9tico">Manejo del coprocesador aritmético</a><br>
+<a href="#Sem%E1foros">Semáforos</a></span><br>
+<span style="font-family: Verdana;"><a href="#Mutexes">Mutexes</a></span><br>
+<span style="font-family: Verdana;"><a href="#Monitores_y_variables_de_condici%F3n">Monitores y variables de condición</a></span><br>
+<span style="font-family: Verdana;"><a href="#Pipes">Pipes</a></span><br>
+<span style="font-family: Verdana;"><a href="#Colas_de_mensajes">Colas de mensajes</a></span><br>
+<span style="font-family: Verdana;"><a href="#Manejo_de_interrupciones_y_excepciones">Manejo de interrupciones y excepciones</a></span><br>
+<span style="font-family: Verdana;"><a href="#Consola">Consola</a></span><br>
+<span style="font-family: Verdana;"><a href="#La_familia_printk">La familia printk</a></span><br>
+<span style="font-family: Verdana;"><a href="#Teclado">Teclado</a></span><br>
+<span style="font-family: Verdana;"><a href="#Leer_una_l%EDnea">Leer una línea</a></span><br>
+<span style="font-family: Verdana;"><a href="#Funciones_de_biblioteca">Funciones de biblioteca</a></span><br>
+<span style="font-family: Verdana;"></span></div>
+<span style="font-family: Verdana;"><br>
+</span>
+<div style="text-align: justify;">
+<h1><a name="Generalidades"></a><small><small><span style="font-family: Verdana;"><span style="font-weight: bold;">Generalidades</span></span></small></small></h1>
+
+<span style="font-family: Verdana;"></span><span style="font-family: Verdana;">MTask ha sido escrito con fines
+didácticos. Puede utilizarse como una
+base de código que ilustra los conceptos básicos de sistemas operativos, sobre la cual se puede experimentar y hacer
+fácilmente agregados y modificaciones. </span><br>
+<span style="font-family: Verdana;"></span><br>
+<span style="font-family: Verdana;">Es un sistema multitarea sencillo
+que corre sobre hardware de PC haciendo uso de un único procesador de tipo
+i386 en modo protegido. También puede correr sobre otros procesadores
+más avanzados de la misma familia, pero no soporta sus funcionalidades
+adicionales ni utiliza más de un núcleo.</span><br>
+<span style="font-family: Verdana;"></span><br>
+<span style="font-family: Verdana;">Para simplificar el código y
+disminuir en lo posible la dependencia de la arquitectura i386, se ha
+decidido ignorar el mecanismo de segmentación típico de estos
+microprocesadores. En MTask los registros de segmento se inicializan
+una vez al arrancar el sistema y no se modifican en el resto del código. Se utiliza
+un modelo de memoria "flat", donde tanto el segmento de código
+como el de datos abarcan el total de la memoria accesible al i386, es
+decir, desde la dirección 0 hasta 4GB-1.</span> <br>
+<span style="font-family: Verdana;"></span><br>
+<span style="font-family: Verdana;">Tampoco se utiliza el mecanismo de
+paginación, aunque se prevé utilizarlo en futuras
+ampliaciones, para aislar al sistema operativo y a las tareas o
+procesos entre sí y para permitir que las tareas o procesos reciban
+zonas generosas de memoria lineal mapeadas por demanda, sin desperdicio
+de memoria física.</span><br>
+<h1><a name="Planificación_scheduling"></a><small><small><span style="font-family: Verdana;"><span style="font-weight: bold;">Planificación (scheduling)</span></span></small></small></h1>
+
+<span style="font-family: Verdana;"></span><span style="font-family: Verdana;">MTask tiene las siguientes características:</span><span style="font-family: Verdana;"></span><br>
+<span style="font-family: Verdana;"></span></div>
+<ul style="text-align: justify;">
+  <li><span style="font-family: Verdana;">Es preemptivo.</span></li>
+  <li><span style="font-family: Verdana;">Cada tarea puede salir del
+modo preemptivo y correr en modo cooperativo durante el tiempo que
+desee.&nbsp; El modo en que corre una tarea no afecta a las demás.</span></li>
+  <li><span style="font-family: Verdana;">Cada tarea puede deshabilitar
+interrupciones durante el tiempo que desee. El estado de habilitación
+de interrupciones de una tarea no afecta a las demás.</span></li>
+  <li><span style="font-family: Verdana;">Tiene ranura de tiempo (40 ms).</span></li>
+  <li><span style="font-family: Verdana;">Las tareas tienen prioridades estáticas.</span></li>
+</ul>
+<div style="text-align: justify; font-family: Verdana;">El algoritmo de
+planificación (scheduling) es el siguiente: en cada momento
+se ejecuta la tarea de mayor prioridad entre las que están listas para
+ejecutar. Si hay más de una tarea con la prioridad máxima en
+condiciones de ejecutar, se elige la que ha estado esperando el
+procesador durante más tiempo. Si dos o más tareas de máxima prioridad
+corren sin bloquearse ni ceder la CPU, se alternan en el uso del microprocesador
+mediante la ranura de tiempo.<br>
+<br>
+Cuando una tarea corre en modo preemptivo puede perder la CPU si se
+bloquea, se suspende o la cede voluntariamente, o si se cumple alguna de las
+siguientes condiciones: otra tarea con mayor prioridad está lista para ejecutar, o hay otra tarea de la misma
+prioridad lista para ejecutar y se termina la ranura de tiempo de la
+tarea actual. Estos eventos pueden ser producidos por una interrupción, y eso le da al
+sistema su carácter preemptivo, es decir, una tarea puede perder la CPU
+como resultado de una interrupción. Sin embargo, si la tarea actual
+está corriendo en modo no preemptivo, solamente puede perder la CPU por
+bloquearse, suspenderse o cederla voluntariamente. <br>
+<br>
+Por ser fijas las prioridades, aún en modo preemptivo una tarea puede
+monopolizar la CPU. Si una tarea de mayor prioridad que
+las demás no se bloquea o suspende,
+las demás no tienen oportunidad de ejecutar. Es responsabilidad del
+programador evitar esta situación, así como otras posibilidades de
+monopolización, por ejemplo, tareas que deshabilitan interrupciones o
+salen del modo preemptivo y luego no se bloquean ni se suspenden ni ceden la CPU.<br>
+<h1><a name="Implementación_y_limitaciones"></a><small><small><span style="font-weight: bold;">Implementación y limitaciones<span style="font-weight: bold;"><span style="font-weight: bold;"></span></span></span></small></small></h1>
+<h1><span style="font-weight: bold;"></span></h1>
+<span style="font-weight: bold;">
+</span>
+MTask no es un sistema operativo completo. Es un kernel que permite crear hilos de ejecución o threads, que
+denominamos "tareas" y sincronizarlos mediante una variedad de
+primitivas de IPC:<br>
+<ul>
+  <li>Colas de espera</li>
+  <li>Pasaje de mensajes sin almacenamiento intermedio ("rendez-vous")</li>
+  <li>Semáforos</li>
+  <li>Mutexes</li>
+  <li>Monitores y variables de condición</li>
+  <li>Pipes</li>
+  <li>Colas de mensajes</li>
+</ul>MTask carece de "procesos" en el sentido que se le da
+habitualmente a esta palabra, es decir, instancias de programas que han
+sido compilados por separado, con
+espacios de datos separados entre sí y del kernel, y que acceden al
+mismo a través de "llamadas al sistema" (system calls), generalmente
+implementadas mediante interrupciones de software. Sin embargo, en esta
+documentación y en los
+comentarios de los fuentes puede que ocasionalmente se hable de
+"procesos" cuando en realidad se está haciendo referencia a tareas o
+threads. El soporte de verdaderos procesos es
+una dirección de posible desarrollo futuro.<br>
+<br>
+Las funciones de creación y manejo de tareas y
+las primitivas de IPC pueden utilizarse incluyendo el archivo de
+cabecera mtask.h. Estas funciones tienen nombres que
+empiezan con letras mayúsculas y son "thread-safe", es decir, pueden
+llamarse desde distintos threads sin peligro. Hay otras funciones y
+variables globales que son de uso interno de MTask, en general tienen
+nombres que empiezan con "mt_" y están todas declaradas en kernel.h.
+Algunas son "thread-safe", otras no. Por último, hay funciones
+genéricas de biblioteca, como strcmp() y printk() (el printf del
+kernel) que conservan los nombres habituales. También en este caso
+algunas son thread-safe y otras no. Por ejemplo malloc() y free() no lo
+son, se recomienda usar en su lugar las funciones de alocación de
+memoria de la API, Malloc() y
+Free().<br>
+<br>
+La idea es que las "aplicaciones" (threads) usen la API principal
+contenida en mtask.h. Estas serían las "llamadas al sistema". Sin
+embargo, en el estado de desarrollo actual de MTask la API está incompleta,
+básicamente por la ausencia de funciones de entrada/salida. MTask
+carece de un file system y de una capa de drivers; ésta es otra dirección de desarrollo futuro. <br>
+<br>
+Hoy las
+únicas primitivas de entrada/salida son ofrecidas por un driver de
+teclado y otro de display VGA o consola (en modo texto). Las funciones
+relacionadas con el teclado empiezan con "mt_kbd_", y las de consola
+con "mt_cons_" y están declaradas en kernel.h. En la
+práctica los threads de aplicación que usan estas funciones incluyen
+kernel.h (que a su vez incluye a la API y a las funciones de
+biblioteca, mtask.h y lib.h).<br>
+<br>
+El estudio de las aplicaciones de ejemplo contenidas en la distribución ilustrarán el uso práctico de todo esto.<br>
+<h1><a name="Distribución_y_sistema_de_desarrollo"></a><small><small><span style="font-weight: bold;">Distribución y sistema de desarrollo</span></small></small></h1>
+
+MTask debe compilarse con versiones relativamente modernas de gcc en
+ambiente Linux.
+También se necesita nasm para los pocos fuentes escritos en assembler y
+mkisofs para generar una imagen de CD booteable.
+<br>
+<br>
+El directorio principal contiene un makefile, y todo está armado para
+generar el sistema completo parándose en dicho directorio y ejecutando
+"make". Esto dará como resultado una imagen de CD (mtask.iso)
+que incluye GRUB (el bootloader) y nuestro kernel (mtask). Esta imagen
+puede ejecutarse en una PC real capaz de arrancar desde un CD, o en una
+máquina virtual. En particular, funciona satisfactoriamente con
+versiones recientes de VirtualBox. Cuando se crea la máquina virtual
+deben dársele como mínimo 16 MB de memoria, ya que el kernel usa un heap
+de
+8 MB. Hasta que no tengamos driver de disco y file system, no hace
+falta crear un disco virtual.<br>
+<br>
+Para limpiar el árbol de directorios, se puede ejecutar "make clean". El
+makefile se ha configurado para generar dependencias automáticas que se
+guardan en el directorio "dep". Por lo tanto, no hace falta declarar las dependencias de los fuentes con los archivos de
+encabezado, el sistema se encarga de esto.<br>
+<br>
+Para agregar cualquier cosa a MTask, basta copiar los fuentes
+correspondientes al directorio "src", agregar los prototipos de las
+funciones o los símbolos públicos en general en mtask.h, kernel.h o
+lib.h según corresponda, y agregar el nombre de los módulos en la lista
+de módulos del makefile. Si se trata de un thread de aplicación, deberá
+incluirse su función de entrada xxx_main() en apps.h, y habrá que editar el fuente del
+shell (shell.c) para poder ejecutarlo desde la línea de comando.<br>
+<br>
+Cuando arranca MTask, la ejecución comienza en el punto de entrada
+_start en kstart.asm. Aquí solamente se establece un stack adecuado y
+se llama a la función mt_main() de kernel.c, que continúa la
+inicialización. Esta función hace básicamente lo siguiente:<br>
+<ul>
+  <li>Inicializa la GDT e IDT (tabla de descriptores de segmentos
+globales y tabla de descriptores de interrupción). Al cargar la GDT se
+inicializan de una vez para siempre los segmentos CS, SS, DS, ES, FS y
+GS cubriendo al rango de direcciones de 0 a 4GB-1.</li>
+  <li>Inicializa el sistema de interrupciones. Se utilizan los
+descriptores 0 a 31 de la IDT para las excepciones generadas por el
+i386, y los descriptores 32 a 47 para las interrupciones de hardware 0
+a 15 respectivamente.</li>
+  
+  <li>Configura el timer para interrumpir cada 20 milisegundos (50 Hz) y captura la interrupción del timer.</li>
+  <li>Inicializa el sistema de manejo de contexto del coprocesador aritmético (i387).<br>
+  </li>
+
+  <li>Inicializa la tarea principal, crea y pone a ejecutar la tarea nula.<br>
+</li>
+  <li>Habilita interrupciones, con lo cual comienza el multitasking.</li>
+  <li>Inicializa la consola y el teclado.</li>
+  <li>Ejecuta la función shell_main() del shell, con lo cual la tarea principal se transforma en un shell.</li>
+</ul>Una vez obtenido el prompt del shell, ejecutar el comando "help"
+para ver una lista de los comandos disponibles. En la distribución
+actual son los siguientes:<br>
+<br>
+&nbsp;&nbsp;&nbsp; Comandos internos:<br>
+<ul>
+  <li><span style="font-weight: bold;">help</span> - Muestra la lista de comandos disponibles<br>
+  </li>
+  <li><span style="font-weight: bold;">exit</span>
+    <span style="font-weight: bold;">[status] </span>- Sale del shell con el status de salida que se pasa, o 0 si
+no se pasa ninguno. Si se sale del shell inicial (el que ejecuta la función mt_main() del kernel) MTask lo dispara nuevamente.</li>
+  <li><span style="font-weight: bold;">reboot</span> - Reinicia el sistema activando la línea de reset de la PC.<br>
+  </li>
+
+</ul>
+&nbsp;&nbsp;&nbsp; Aplicaciones:<br>
+
+<ul>
+  <li><span style="font-weight: bold;">shell</span> - Intérprete de comandos.<br>
+  </li>
+  
+  <li><span style="font-weight: bold;">setkb</span> <span style="font-weight: bold;">[distribución]</span>
+- Sin argumentos, muestra la distribución actual del teclado y las
+distribuciones disponibles. Si se pasa un argumento, establece esa
+distribución. Las distribuciones disponibles actualmente son "us-std" y
+"spanish".</li><li><span style="font-weight: bold;">sfilo</span>, <span style="font-weight: bold;">filo</span>, <span style="font-weight: bold;">xfilo, afilo</span>
+- Cuatro soluciones al problema de los 5 filósofos, las tres primeras
+utilizando un monitor.
+Sfilo es el más simple, usa una sola variable de condición. Filo usa
+una variable de condición por filósofo. Esto reduce (pero no elimina
+por completo) la probabilidad de que un filósofo necesite bloquearse
+más de una vez mientras espera sus tenedores. Xfilo agrega un array de
+estado de los filósofos para garantizar que haya como máximo un bloqueo
+mientras se esperan los tenedores. Afilo no usa monitor ni variables de
+condición, consigue el mismo resultado utilizando Atomic() y Unatomic()
+para delimitar las zonas críticas y Pause() y Ready() para suspender y
+despertar a los filósofos. Primitivas de IPC utilizadas:
+monitor y variables de condición, pasaje de mensajes.<br>
+  </li>
+  <li><span style="font-weight: bold;">camino</span>, <span style="font-weight: bold;">camino_ns</span> <span style="font-weight: bold;">[cantidad]</span>
+- Dos soluciones al problema de manejar un camino con un tramo de una
+sola vía evitando deadlocks. La primera solución, más simple, presenta
+probabilidad de inanición, es decir, mientras haya autos circulando en
+un sentido un auto circulando en sentido contrario puede esperar
+indefinidamente. La segunda carece de inanición ("ns" es por "no
+starvation"). Un auto circulando en un sentido no tendrá que esperar
+más tiempo que el necesario para que pasen 10 autos en sentido opuesto.
+El número 10 puede modificarse pasando un argumento a camino_ns.
+Primitivas de IPC utilizadas:&nbsp; semáforos (camino),&nbsp; pasaje de
+mensajes (camino_ns).</li>
+  <li><span style="font-weight: bold;">prodcons</span> - Ilustración de un sistema productor/consumidor.
+Dispara 4 tareas: un productor, un consumidor, una tarea que muestra el
+estado del productor y el consumidor en cada instante, y un reloj que
+muestra los segundos transcurridos desde que se inició la ejecución.
+Primitivas de IPC utilizadas: semáforos.</li>
+  <li><span style="font-weight: bold;">divz dividendo divisor</span> -
+Ilustra la captura de la excepción 0 (división por cero) y cómo puede
+utilizarse la estructura de registros empujada al stack por la
+excepción para solucionar el problema producido por un divisor nulo.</li>
+
+</ul>
+<h1><a name="Fuentes_en_assembler"></a><small><small>Fuentes en assembler</small></small></h1>
+En el desarrollo de sistemas como éste, a veces es necesario consultar
+la salida del compilador antes del ensamblado, para determinar ciertos
+detalles de bajo nivel. Por ejemplo, al escribir el comando divz se
+plantea la necesidad de determinar dónde está el divisor en el momento
+en que se produce la división por cero, para poder modificarlo por un
+valor distinto. Para ello, puede ejecutarse:<br>
+<br>
+&nbsp;&nbsp;&nbsp; make s/divz.s<br>
+<br>
+Examinando divz.s se determina que el divisor está en [ebp + 12]. El
+archivo está escrito en assembler de GNU (gas), que
+tiene una sintaxis diferente de la de nasm. <br>
+
+<h1><a name="Algunos_detalles_de_implementación"></a><small><small><span style="font-weight: bold;">Algunos detalles de implementación</span></small></small></h1>
+
+Una buena parte del manejo de tareas se basa en el uso de colas
+ordenadas. Hay una cola global de tareas listas para ejecutar y otra de
+tareas que están esperando que transcurra el tiempo. También hay una
+cola de tareas terminadas que no pudieron liberar sus recursos, las
+funciones que alocan memoria recorren esta cola, liberan los recursos y
+la vacían. <br>
+<br>
+Todos los objetos bloqueantes (como semáforos y variables de condición)
+y la transmisión de mensajes de una tarea a otra involucran el uso de
+colas de espera donde las tareas pueden bloquearse. <br>
+<br>
+Salvo la cola de tiempo, las demás colas están ordenadas en forma
+creciente por prioridad y, entre tareas de la misma prioridad, por el
+tiempo que llevan esperando. El planificador (scheduler) elige siempre
+la última tarea de la cola de tareas listas para ejecutar; será la de
+máxima prioridad o, entre dos o más con la máxima prioridad, la que
+lleva más tiempo esperando. Las señalizaciones de semáforos o variables
+de condición despertarán siempre a la última tarea de la cola asociada.
+<br>
+<br>
+La cola de tiempo está ordenada en forma creciente por el valor del
+campo "ticks" en el bloque de control de cada tarea. Este valor
+representa la cantidad de ticks de timer que le faltan a la tarea para
+despertarse, medida en forma incremental con respecto a la tarea
+anterior. La interrupción de timer decrementa el campo "ticks" de
+la primera tarea en la cola de tiempo, si llega a cero la despierta y
+eventualmente a las que vengan detrás que también tengan 0 en este
+campo. Esta cola se usa cuando las tareas se bloquean esperando el
+transcurso de una cierta cantidad de tiempo, o cuando se bloquean por
+otros motivos pero con timeout.<br>
+<br>
+En todas las funciones bloqueantes que acepten un timeout, FOREVER (2³²-1) significa "infinito".<br>
+<br>
+Estados de una tarea:<br>
+<ul>
+  <li> <span style="font-weight: bold;">TaskSuspended</span> - La tarea
+está suspendida y no puede ejecutar. No está en ninguna cola. Las
+tareas se crean en este estado, para que empiecen a ejecutar hay que
+pasárselas a la función Ready().<br>
+ </li>
+  <li><span style="font-weight: bold;">TaskReady</span> - La tarea está en condiciones de ejecutar. Las tareas en este estado están en la cola global de tareas listas para ejecutar.<br>
+  </li>
+  <li><span style="font-weight: bold;">TaskCurrent</span> - La tarea
+está utilizando la CPU. Esta tarea no está en ninguna cola. Por ser un
+sistema de un solo núcleo, solamente hay una tarea en este estado. <br>
+ </li>
+  <li><span style="font-weight: bold;">TaskDelaying</span> - La tarea
+está bloqueada esperando que transcurra el tiempo necesario para
+despertarse. Todas las tareas en este estado están en la
+cola de tiempo.<br>
+ </li>
+  <li><span style="font-weight: bold;">TaskWaiting</span>
+- La tarea está bloqueada esperando en una cola de tareas,
+probablemente asociada a algún semáforo o variable de condición.
+Adicionalmente, si la espera es con timeout, la tarea está también en
+la cola de tiempo.<br>
+ </li>
+  <li><span style="font-weight: bold;">TaskSending</span> - La tarea
+está bloqueada esperando transmitirle un mensaje a otra. Está insertada
+en una cola de tareas asociada a la tarea receptora del mensaje.
+Adicionalmente, si la transmisión es con timeout, también está en la
+cola de tiempo.<br>
+ </li>
+  <li><span style="font-weight: bold;">TaskReceiving</span> - La tarea está bloqueada esperando recibir un mensaje. Si la recepción es con timeout, está en la cola de tiempo. <br>
+ </li>
+  <li style="font-weight: bold;">TaskTerminated <span style="font-weight: normal;">- La tarea está terminada. Está en la cola de tareas terminadas.&nbsp;</span> <br style="font-weight: normal;">
+  </li>
+</ul>
+
+<h1><a name="API_principal"></a><small><small><span style="font-weight: bold;">API principal</span></small></small></h1>
+<h1><span style="font-weight: bold;"></span></h1>
+<span style="font-weight: bold;">
+</span><span style="font-family: Courier New,Courier,monospace; font-weight: bold;"></span> <span style="font-family: Courier New,Courier,monospace; font-weight: bold;"></span><span style="font-family: Verdana;"></span><span style="font-family: Courier New,Courier,monospace; font-weight: bold;"></span><span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">typedef void (*TaskFunc_t)(void *arg);</span><span style="color: rgb(51, 102, 255);"> </span><br style="color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">Task_t *CreateTask(TaskFunc_t func, unsigned stacksize, void *arg, char *name, unsigned priority);</span><br style="color: rgb(51, 102, 255);">
+<br>
+<span style="font-family: Verdana;">Crear una tarea. El parámetro stacksize es el tamaño del stack; el tamaño
+mínimo es 4K, si se pasa un valor menor se alocará el mínimo. El
+argumento arg se pasa a la función que implementa la tarea. El
+parámetro name es para darle un nombre, es opcional y puede pasarse
+NULL. La prioridad mínima es 0 y</span>
+la máxima 2³²-1. La función devuelve un
+puntero al bloque de control de la tarea creada, que está en estado
+suspendido (<span style="font-weight: bold;">TaskSuspended</span>), tiene las interrupciones habilitadas y corre en modo preemptivo.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">Task_t *CurrentTask(void);</span><br style="color: rgb(51, 102, 255);">
+<br>
+<span style="font-family: Verdana;">Devuelve un puntero a la tarea actual.</span><br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void DeleteTask(Task_t *task);</span><br style="color: rgb(51, 102, 255);">
+<br>
+<span style="font-family: Verdana;">Termina una tarea. No se puede aplicar a la tarea principal.</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold;">&nbsp;&nbsp;&nbsp; </span><br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);"></span><span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned GetPriority(Task_t *task);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void SetPriority(Task_t *task, unsigned priority);</span><br style="color: rgb(51, 102, 255);">
+<br style="color: rgb(51, 102, 255);">
+<span style="font-family: Verdana;">Funciones para leer y establecer la prioridad de una tarea.</span><br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void Suspend(Task_t *task);</span><br>
+<br>
+<span style="font-family: Verdana;"></span>Suspender una tarea. La única manera de sacarla del estado de suspensión es aplicarle la función Ready().<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void Ready(Task_t *task);</span><br>
+<br>
+<span style="font-family: Verdana;">Poner una tarea en condiciones de
+ejecutar, sin importar su estado previo. Si la tarea estaba bloqueada,
+la función bloqueante retorna false.<span style="font-weight: bold;"></span></span><span style="font-weight: bold;"><br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+</span>
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">TaskQueue_t *CreateQueue(char *name);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void DeleteQueue(TaskQueue_t *queue);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool WaitQueue(TaskQueue_t *queue);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool WaitQueueTimed(TaskQueue_t *queue, unsigned msecs);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool SignalQueue(TaskQueue_t *queue);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void FlushQueue(TaskQueue_t *queue, bool success);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Funciones de colas de tareas, utilizadas para alojar tareas que se bloquean esperando alguna condición. <br>
+<br>CreateQueue() aloca una cola y DeleteQueue() la da de baja,
+despertando con status de error a las tareas que estuvieran bloqueadas en
+ella. <br>
+<br>
+Las funciones WaitQueue() y WaitQueueTimed() bloquean una tarea (poniéndola en el estado <span style="font-weight: bold;">TaskWaiting</span>)
+y la insertan en la cola a esperar que la despierten, sin y con timeout
+respectivamente. Son funciones booleanas que retornan true si la espera
+termina con éxito, porque la tarea fue despertada por SignalQueue(), y false en caso contrario, por ejemplo, porque la
+tarea fue despertada por Ready() o porque se agotó el timeout. <br>
+<br>SignalQueue() despierta a la última tarea de la cola y retorna
+true, o
+retorna false si la cola estaba vacía y no se despertó a ninguna tarea.
+Esto último es lo que llamamos un "wakeup perdido" - señalizar una cola
+en la que no hay ninguna tarea esperando. El valor de retorno de
+SignalQueue() permite detectar esta situación.<br>
+<br>
+FlushQueue() vacía la cola despertando a todas las tareas que estén
+esperando en ella, y pasando el valor del parámetro sucess como status
+de salida de sus respectivas llamadas a WaitQueue() o WaitQueueTimed().<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool Send(Task_t *to, void *msg, unsigned size);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool SendCond(Task_t *to, void *msg, unsigned size);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool SendTimed(Task_t *to, void *msg, unsigned size, unsigned msecs);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool Receive(Task_t **from, void *msg, unsigned *size);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool ReceiveCond(Task_t **from, void *msg, unsigned *size);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool ReceiveTimed(Task_t **from, void *msg, unsigned *size, unsigned msecs);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Funciones relacionadas con el pasaje de mensajes sin almacenamiento
+intermedio ("rendez-vous"). Las funciones básicas son Send() para
+transmitir un mensaje y Receive() para recibir uno. Estas funciones son
+bloqueantes y no tienen timeout. Hay variantes con timeout y otras
+condicionales (equivalente a timeout 0). <br>
+<br>
+En este sistema de pasaje de mensajes, Send() y Receive() se bloquean
+hasta que la contraparte ejecute la función complementaria. Send()
+intenta transmitir un mensaje a un destinatario, si el destinatario
+está bloqueado esperando el mensaje (en estado <span style="font-weight: bold;">TaskReceiving</span>), se pasa el mensaje y el destinatario se desbloquea. En caso contrario, el remitente se bloquea (en estado <span style="font-weight: bold;">TaskSending</span>)
+y se inserta en una cola de tareas que está en el bloque de control del
+destinatario. Será desbloqueado cuando el destinatario reciba el
+mensaje. <br>
+<br>
+El primer argumento de Send() es la tarea destinataria, luego vienen un
+buffer conteniendo el mensaje y su tamaño. Los últimos dos argumentos
+son opcionales, puede pasarse NULL y 0. En este caso no se pasa ningún
+mensaje y solamente se obtiene una sincronización entre las dos tareas.<br>
+<br>
+Receive() es parecida a Send() con las siguientes diferencias: el
+parámetro from no es un puntero a una tarea sino un puntero a puntero,
+y el parámetro size no es un entero sino un puntero a entero. Size es un puntero a una variable entera que debe
+inicializarse con el tamaño del buffer destinado a almacenar el mensaje
+recibido (msg). Cuando Receive() retorne, la variable contendrá el
+tamaño real del mensaje, que será igual o menor al valor inicial de la
+variable. Si el mensaje no cabe en el buffer, se produce un error fatal
+(Panic). El uso del parámetro from es el siguiente: si se pasa el
+valor NULL, se interpreta que la tarea está dispuesta a
+recibir un mensaje de cualquier remitente, y no le interesa saber quién
+se lo envía. En caso contrario, debe pasarse la dirección de una
+variable del tipo "puntero a tarea" (Task_t *). Si esta variable está
+inicializada en NULL, significa que la tarea está dispuesta a
+recibir un mensaje de cualquier otra, pero desea saber quién se lo
+envía. En ese caso, cuando Receive() retorne la variable contendrá un
+puntero al remitente. En cambio, si la variable se inicializa con un
+puntero a una tarea determinada, significa que Receive() sólo
+recibirá un mensaje de esa tarea y de ninguna otra.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void Pause(void);</span><br>
+<br>
+Suspender la tarea actual. Solamente podrá volver a ejecutar si alguna
+otra tarea le aplica la función Ready(). Equivale a Suspend(CurrentTask()).<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void Yield(void);</span><br>
+<br>
+Esta función equivale a Ready(CurrentTask()). Da al sistema la oportunidad
+de quitar la CPU a la tarea actual si se cumplen las condiciones para
+ello. Es conveniente usarla en situaciones que de otro modo serían de
+"busy waiting", por ejemplo:<br>
+<br><span style="font-family: Courier New,Courier,monospace; color: rgb(51, 102, 255); font-weight: bold;">while ( !condition )</span><br style="font-family: Courier New,Courier,monospace; color: rgb(51, 102, 255); font-weight: bold;"><span style="font-family: Courier New,Courier,monospace; color: rgb(51, 102, 255); font-weight: bold;">
+&nbsp;&nbsp;&nbsp;  Yield();</span><br>
+&nbsp; <br>
+Una tarea que corre en modo no preemptivo y no necesita bloquearse
+o suspenderse debería llamar a esta función con razonable frecuencia para no
+monopolizar el uso de la CPU.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void Delay(unsigned msecs);</span><br>
+<br>
+Dormir una cierta cantidad de tiempo. La tarea pasa al estado <span style="font-weight: bold;">TaskDelaying</span>.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void Exit(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<br>
+Terminar una tarea. La tarea pasa al estado <span style="font-weight: bold;">TaskTerminated</span>
+e ingresa en la cola de tareas terminadas hasta su destrucción
+definitiva. Esta función se llama automáticamente si una tarea retorna
+del cuerpo de la función que la implementa.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void Atomic(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void Unatomic(void);</span><br>
+<br>
+Funciones para entrar y salir del modo no preemptivo o cooperativo.
+Atomic() incrementa una variable en el bloque de control de la tarea
+actual, y Unatomic() la decrementa. Cuando la variable es cero la tarea
+actual corre en modo preemptivo; cuando es distinta de cero, en modo
+cooperativo. Cuando la tarea está en modo cooperativo, solamente puede
+perder la CPU si se bloquea, suspende o llama a Yield(). Correr en
+modo cooperativo protege una tarea contra el uso concurrente de
+recursos globales compartidos por parte de otras tareas, pero no contra
+la ejecución de rutinas de interrupción que pudieran acceder a los
+mismos recursos. Para ello deben deshabilitarse las interrupciones.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void DisableInts(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void RestoreInts(void);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Funciones para deshabilitar y rehabilitar interrupciones en la tarea
+actual, incrementan y decrementan una variable en el bloque de control
+de la misma.&nbsp; Cuando esa variable no es cero, la tarea corre con
+las interrupciones deshabilitadas. Proporcionan un grado de protección
+superior a Atomic() y Unatomic(), porque protegen contra el acceso
+concurrente a recursos globales compartidos no sólo por parte de otras
+tareas sino también de rutinas de interrupción. Deben utilizarse con
+mucho cuidado para evitar deshabilitar las interrupciones durante un
+tiempo excesivo. Es perfectamente lícito deshabilitar interrupciones y
+bloquearse inmediatamente, pues al comenzar a ejecutar otra tarea las
+interrupciones quedarán habilitadas o no dependiendo de cómo las tenga
+la nueva tarea. Una tarea que corre con interrupciones deshabilitadas
+está al mismo tiempo en modo no preemptivo, pues al no haber
+interrupciones éstas no pueden quitarle la CPU.<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void *Malloc(unsigned size);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">char *StrDup(char *str);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void Free(void *mem);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<br>
+Funciones para alocación y liberación de memoria, similares a malloc(),
+strdup() y free() de la biblioteca, pero thread-safe. Adicionalmente,
+Malloc() inicializa la memoria alocada con ceros. Estas funciones están
+serializadas utilizando Atomic() y Unatomic(). <span style="font-weight: bold;">Las rutinas de interrupción no deben llamar a funciones de alocación o liberación de memoria.</span><br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void SetData(Task_t *task, void *data);</span><br>
+<br>
+En el bloque de control de cada tarea hay un campo (void *data) que el
+kernel no utiliza y que puede ser usado por las aplicaciones para asignarle
+un bloque de datos privados a una tarea. Esto puede ser útil en
+particular para aquellas tareas que necesitan guardar/reponer contextos
+adicionales a los mantenidos por MTask (ver la función siguiente).<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">typedef void (*Switcher_t)(Task_t *save, Task_t *restore);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold;"><span style="color: rgb(51, 102, 255);">void SetSwitcher(Switcher_t switcher);</span><br style="color: rgb(51, 102, 255);">
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+</span>
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold;"></span><span style="font-family: Verdana;">Algunas tareas pueden requerir guardar y reponer un contexto adicional al que guarda/repone MTask</span>
+(los registros del microprocesador y eventualmente el coprocesador
+aritmético). Para ello puede declararse una función según el prototipo. <span style="font-family: Verdana;">Esta
+función recibe un puntero a la tarea que está dejando la CPU (save) y
+un puntero a la próxima tarea que toma la CPU (restore). Ejecuta con
+las interrupciones deshabilitadas y debe abstenerse de habilitarlas. </span><br>
+
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void Panic(char *msg);</span><br>
+<br>
+Error fatal. Imprime un mensaje en consola y detiene el sistema.<br>
+<h1><a name="Manejo_del_coprocesador_aritmético"></a><small><small><span style="font-weight: bold;">Manejo del coprocesador aritmético</span></small></small></h1>
+El contexto del coprocesador aritmético se guarda y restablece para las
+tareas que lo utilizan, pero solamente cuando es necesario. Al
+inicializarse el sistema de manejo del coprocesador, se captura la
+excepción 7. Esta excepción se genera cuando se intenta ejecutar una
+instrucción de coprocesador y está levantado el bit TS (task switch) en
+el registro de control CR0. Este bit es levantado por la función
+mt_select_task() cuando cambia la tarea actual y ésta no coincide con
+la última tarea que utilizó el coprocesador. El manejador de esta
+excepción (en el archivo math.c), resetea el bit y luego analiza si
+debe
+guardar el contexto del coprocesador en la última tarea que lo utilizó,
+y restaurarlo en la próxima. El sistema es muy eficiente, por ejemplo,
+si una sola tarea utiliza el coprocesador no se produce ningún guardado
+o restauración de contexto del mismo (ni siquiera se produce la
+excepción 7).<br>
+<br>
+El sistema está pensado suponiendo que solamente las tareas utilizan el coprocesador. <span style="font-weight: bold;">Las rutinas de interrupción no deben utilizar el coprocesador,</span> a menos que guarden y restablezcan su contexto manualmente.<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<h1><a name="Semáforos"></a><small><small><span style="font-family: Verdana; font-weight: bold;">Semáforos</span></small></small></h1>
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">typedef struct</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">{</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; unsigned value;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; TaskQueue_t *queue;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">}</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">Semaphore_t;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<br>
+El semáforo es simplemente una cola de tareas donde bloquearse, y un
+contador de las veces que se intentó despertar una tarea pero la cola
+estaba vacía, es decir, un contador de wakeups perdidos. Cuando el
+valor del contador es mayor que cero, la cola está vacía. Cuando el
+valor es igual a cero, puede haber tareas bloqueadas en la cola.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">Semaphore_t *CreateSem(char *name, unsigned value);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void DeleteSem(Semaphore_t *sem);</span><br style="color: rgb(51, 102, 255);">
+<br>Crear y dar de baja un semáforo. El nombre es opcional y puede
+pasarse NULL, el parámetro value es el valor inicial del semáforo.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool WaitSem(Semaphore_t *sem);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool WaitSemCond(Semaphore_t *sem);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool WaitSemTimed(Semaphore_t *sem, unsigned msecs);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Funciones para esperar en un semáforo, sin timeout, con timeout o
+condicionalmente (timeout 0). Si el valor del contador es mayor que
+cero simplemente lo decrementan y retornan exitosamente. En caso
+contrario, el proceso se bloquea en la cola de espera. Retornan true
+si la espera tuvo éxito o
+false si terminó por cualquier otro motivo (por ejemplo timeout).<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void SignalSem(Semaphore_t *sem);</span><br>
+<br>Señalizar el semáforo. Si hay tareas en la cola despierta la
+última, en
+caso contrario (wakeup perdido) incrementa el contador. Esta función y
+las dos que&nbsp; siguen pueden ser utilizadas por rutinas de
+interrupción, pues no son bloqueantes ni alocan o liberan memoria.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned ValueSem(Semaphore_t *sem);</span><br>
+<br>
+Retorna el valor actual del contador.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void FlushSem(Semaphore_t *sem, bool wait_ok);</span><br>
+<br>
+Despierta a todas las tareas que estén en la cola del semáforo con el
+status de salida wait_ok y deja el valor del semáforo en cero.<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<h1><a name="Mutexes"></a><small><small><span style="font-family: Verdana; font-weight: bold;">Mutexes</span></small></small></h1>
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">typedef struct </span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">{</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; unsigned use_count;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Task_t *owner;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Semaphore_t *sem;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">}</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">Mutex_t;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<br>
+El mutex es un dispositivo de exclusión mutua. Puede usarse simplemente
+un semáforo inicializado en 1, pero para permitir la ocupación
+recursiva y realizar ciertas verificaciones de seguridad conviene
+agregarle dos campos adicionales: el dueño (la tarea que lo está
+ocupando) y el nivel de anidamiento de la ocupación. Las funciones de
+mutex no están pensadas para ser utilizadas por interrupciones.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">Mutex_t *CreateMutex(char *name);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void DeleteMutex(Mutex_t *mut);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Creación y destrucción.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool EnterMutex(Mutex_t *mut);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool EnterMutexCond(Mutex_t *mut);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool EnterMutexTimed(Mutex_t *mut, unsigned msecs);</span><br style="color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void LeaveMutex(Mutex_t *mut);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Entrar en un mutex (con sus tres variantes: sin timeout, con timeout y
+condicional) y salir de él. Debe salirse del mutex
+tantas veces como se entró para que éste quede libre para ser ocupado
+por otra tarea.<br>
+<h1><a name="Monitores_y_variables_de_condición"></a><small><small><span style="font-family: Verdana; font-weight: bold;">Monitores y variables de condición</span></small></small></h1>
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">typedef struct</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">{</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Task_t *owner;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Semaphore_t *sem;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">}</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">Monitor_t;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">Monitor_t *CreateMonitor(char *name);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void DeleteMonitor(Monitor_t *mon);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool EnterMonitor(Monitor_t *mon);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool EnterMonitorCond(Monitor_t *mon);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool EnterMonitorTimed(Monitor_t *mon, unsigned msecs);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void LeaveMonitor(Monitor_t *mon);</span><br style="color: rgb(51, 102, 255);">
+<br>
+El monitor es un mutex no recursivo, por lo tanto falta en la
+estructura el campo de cuenta de uso o nivel de ocupación. Las
+funciones son similares a las del mutex. Las funciones de monitor no
+son aptas para ser utilizadas en rutinas de interrupción.<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">typedef struct</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">{</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Monitor_t *monitor;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; TaskQueue_t *queue;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">}</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">Condition_t;</span><br style="color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);"><br>
+Condition_t *CreateCondition(char *name, Monitor_t *mon);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void DeleteCondition(Condition_t *cond);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);"><br style="color: rgb(51, 102, 255);">
+</span>
+Una variable de condición es simplemente una cola de tareas asociada a
+un monitor, donde las tareas pueden bloquearse esperando que se
+produzca una determinada condición.<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);"></span><span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool WaitCondition(Condition_t *cond);</span><br style="color: rgb(51, 102, 255);">
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool WaitConditionTimed(Condition_t *cond, unsigned msecs);</span><br style="color: rgb(51, 102, 255);">
+
+<br style="color: rgb(51, 102, 255);">
+Funciones para esperar en la cola de tareas, sin y con timeout. La
+tarea que las use debe poseer el monitor asociado. Al llamar a
+WaitCondition...() ocurre <span style="font-weight: bold;">atómicamente</span> lo siguiente:<br>
+<ul>
+  <li>La tarea sale del mutex.</li>
+  <li>La tarea se bloquea en la cola de tareas de la variable de condición.&nbsp;</li>
+</ul>
+El carácter atómico impide los wakeups perdidos. Cuando la tarea
+despierta, vuelve a ingresar al mutex y la función WaitCondition...()
+retorna con el status de la espera.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool SignalCondition(Condition_t *cond);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void BroadcastCondition(Condition_t *cond);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Estas funciones señalizan la cola de tareas de la variable de
+condición, despertando a la última tarea o a todas. La tarea que las use debe poseer el monitor asociado. SignalCondition()
+returna true si despertó una tarea y false si la cola estaba vacía.<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<h1><a name="Pipes"></a><small><small><span style="font-family: Verdana; font-weight: bold;">Pipes</span></small></small></h1>
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">typedef struct</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">{</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Monitor_t *monitor;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Condition_t *cond_get;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Condition_t *cond_put;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; unsigned size;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; unsigned avail;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; char *buf;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; char *head;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; char *tail;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; char *end;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">}</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">Pipe_t;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<br>
+Este pipe es un mecanismo de comunicación con buffer intermedio similar
+al de Unix. En su implementación se ha utilizado un monitor y un par de
+variables de condición para la sincronización y un buffer circular para
+almacenar los datos. Las funciones de pipes no pueden utilizarse en rutinas
+de interrupción por incluir un monitor. Ver, en cambio, las colas de
+mensajes.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">Pipe_t
+*CreatePipe(char *name, unsigned size);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void DeletePipe(Pipe_t *p);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Creación y destrucción. <br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned GetPipe(Pipe_t *p, void *data, unsigned size);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned GetPipeCond(Pipe_t *p, void *data, unsigned size);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned GetPipeTimed(Pipe_t *p, void
+*data, unsigned size, unsigned msecs);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned PutPipe(Pipe_t *p, void *data, unsigned size);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned PutPipeCond(Pipe_t *p, void *data, unsigned size);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned PutPipeTimed(Pipe_t *p, void
+*data, unsigned size, unsigned msecs);</span><br style="color: rgb(51, 102, 255);">
+<br style="color: rgb(51, 102, 255);">
+Funciones para leer y escribir el pipe, cada una con tres variantes
+(sin timeout, con timeout y condicional). La semántica de
+lectura y escritura es igual que en los pipes de Unix. PutPipe()
+intenta escribir una cantidad de bytes en el pipe, y se bloquea si el
+pipe está lleno. Retorna cuando puede escribir algo, que puede ser
+menor que la cantidad de bytes que se pedía. Similarmente, GetPipe()
+intenta leer una cantidad de bytes y se bloquea cuando el pipe está
+vacío. Retorna cuando puede leer algo, que puede ser una cantidad menor
+que la pedida. Las variantes con timeout pueden retornar 0 bytes
+prematuramente por agotamiento del tiempo, y las variantes
+condicionales nunca se bloquean. Las funciones retornan la
+cantidad de bytes leídos o escritos.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned AvailPipe(Pipe_t *p);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Retorna la cantidad de bytes contenidos en el pipe.<br>
+<h1><a name="Colas_de_mensajes"></a><small><small><span style="font-family: Verdana; font-weight: bold;">Colas de mensajes</span></small></small></h1>
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">typedef struct</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">{</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Mutex_t *mutex_get;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Mutex_t *mutex_put;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Semaphore_t *sem_get;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; Semaphore_t *sem_put;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; unsigned msg_size;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; char *buf;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; char *head;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; char *tail;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; char *end;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">}</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">MsgQueue_t;</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<br>
+La cola de mensajes es un simple buffer circular de mensajes de tamaño
+fijo, que se leen y escriben de a uno. Los mutexes mutex_get y
+mutex_put, si se usan, permiten el acceso concurrente de más de un
+lector y/o escritor. El algoritmo de buffer circular utilizado
+determina que los mutexes sean innecesarios cuando no hay
+concurrencia de escritores o lectores; esto aumenta la eficiencia del
+mecanismo y permite utilizarlo en rutinas de interrupción.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">MsgQueue_t
+*CreateMsgQueue(char *name,
+unsigned msg_max, unsigned msg_size, bool serialized_get, bool
+serialized_put);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void DeleteMsgQueue(MsgQueue_t *mq);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Creación y destrucción. Los parámetros msg_max y msg_size describen la
+máxima cantidad de mensajes y el tamaño de cada uno, respectivamente.
+Los parámetros serialized_get y serialized_put controlan el uso de
+mutexes de lectura y escritura; debe pasarse true cuando se prevé la
+concurrencia de dos o más lectores o escritores, respectivamente, y
+false en caso contrario.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool GetMsgQueue(MsgQueue_t *mq, void *msg);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool GetMsgQueueCond(MsgQueue_t *mq, void *msg);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool GetMsgQueueTimed(MsgQueue_t *mq, void *msg, unsigned msecs);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool PutMsgQueue(MsgQueue_t *mq, void *msg);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool PutMsgQueueCond(MsgQueue_t *mq, void *msg);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool PutMsgQueueTimed(MsgQueue_t *mq, void *msg, unsigned msecs);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned AvailMsgQueue(MsgQueue_t *mq);</span><br style="color: rgb(51, 102, 255);">
+<br style="color: rgb(51, 102, 255);">
+Estas funciones son similares a las del pipe, pero escriben y leen un
+mensaje de tamaño fijo por vez. Las variantes
+condicionales (timeout 0) pueden ser usadas en rutinas de
+interrupción, en ese caso es necesario reservar ese extremo de la cola
+de mensajes para uso exclusivo de la interrupción y no configurarle un
+mutex. Un ejemplo de este uso puede apreciarse en el driver de teclado
+(keyboard.c) donde la interrupción de teclado coloca en una cola de
+mensajes los códigos leídos (scan codes).<br style="font-family: Courier New,Courier,monospace;">
+<h1><a name="Manejo_de_interrupciones_y_excepciones"></a><small><small><span style="font-weight: bold;">Manejo de interrupciones y excepciones</span></small></small></h1>
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">typedef void (*exception_handler)(unsigned except_number, unsigned error, mt_regs_t *regs);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">typedef void (*interrupt_handler)(unsigned irq_number);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_set_int_handler(unsigned irq_num, interrupt_handler handler);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_set_exception_handler(unsigned except_num, exception_handler handler);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_enable_irq(unsigned irq);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_disable_irq(unsigned irq);</span><br style="color: rgb(51, 102, 255);">
+<br style="color: rgb(51, 102, 255);">
+MTask configura una IDT de 48 entradas, de las cuales las 32 primeras
+están destinadas al manejo de excepciones del i386, y las 16 últimas
+(desde la 32 a la 47) al manejo de interrupciones de hardware (0 a 15).
+Captura estos 48 vectores de interrupción y los redirige a un manejador
+único. <br>
+<br>
+El manejador único empuja en el stack el contexto de la tarea actual e
+incrementa una variable global que lleva cuenta del nivel de
+anidamiento de interrupciones. Si se trata de una interrupción de
+primer nivel (es decir, el nivel de anidamiento pasa de 0 a 1) guarda
+el valor del puntero al stack (esp) en el bloque de control de la tarea
+actual (mt_curr_task) y cambia el stack a un stack interno dedicado al
+manejo de interrupciones. Este stack quedará puesto hasta que se
+retorne de la interrupción de primer nivel (es decir, cuando el nivel
+de anidamiento pase de 1 a 0).<br>
+<br>
+Para atender la interrupción o excepción el manejador indexa un par de
+tablas de punteros a manejadores de interrupción o de excepción,
+respectivamente.<br>
+<br>
+Los manejadores de excepción reciben como argumento el número de
+excepción (0 a 31), un código de error y un puntero a una estructura
+(definida en kernel.h) que describe el contenido del stack frame con el contexto
+guardado, es decir, los registros del procesador en el momento de
+producirse la excepción. El código de error es el generado por
+el i386 para algunas excepciones, y vale 0 para las demás. Mediante el
+puntero a la estructura de registros pueden no solamente leerse, sino
+también modificarse los valores de dichos registros; los valores nuevos
+se harán efectivos cuando el manejador de excepción retorne y se
+reponga el contexto.<br>
+<br>
+Los manejadores de interrupciones de hardware reciben como argumento el
+número de interrupción (0 a 15). Estos manejadores deben hacer lo
+necesario para resetear la interrupción, pero no deben ocuparse de
+enviar el código de fin de interrupción (EOI) a los PICs. El
+manejador común se encarga de eso. Se los llama con interrupciones
+deshabilitadas, pero pueden habilitarlas si lo consideran adecuado. Los
+PICs garantizan que una interrupción no será interrumpida por sí misma,
+de modo que no es necesario que el manejador sea reentrante.<br>
+<br>
+Cuando retorna el manejador de excepción o interrupción, el manejador
+único decrementa la variable que lleva el nivel de anidamiento de
+interrupciones. Si esta variable pasa de 1 a 0 (es decir, se está
+retornando de una interrupción de primer nivel), el manejador llama a
+la función mt_select_task(), que es la encargada de evaluar si la tarea
+actual debe conservar la CPU o conviene dársela a otra. En este último
+caso, mt_select_task() modifica el valor de la variable global
+mt_curr_task, que apunta al bloque de control de la tarea actual. Luego
+el manejador cambia el puntero al stack (esp) al valor almacenado en el
+bloque de control de la tarea actual (que puede ser distinta de la que
+había cuando se produjo la interrupción), recupera el contexto del
+stack y retorna. Este es el mecanismo que da a MTask su carácter
+preemptivo: la tarea actual puede cambiar al retornar una interrupción
+de primer nivel.<br>
+<br>
+Inicialmente todas las interrupciones y excepciones están atendidas por
+un par de manejadores por defecto que se limitan a imprimir un mensaje
+de interrupción no manejada o excepción no manejada y detienen el
+sistema. Para establecer un manejador para una excepción o
+interrupción, pueden utilizarse las funciones
+mt_set_exception_handler() y mt_set_int_handler(). Las funciones
+mt_enable_irq() y mt_disable_irq() habilitan y deshabilitan
+interrupciones de hardware específicas modificando las máscaras de los
+controladores de interrupciones maestro y esclavo (PICs).<br>
+<br>
+Al arrancar, MTask establece un manejador para la interrupción de timer
+(IRQ 0) y la habilita. Luego, al inicializar el driver de teclado, se
+establece un manejador para la interrupción de teclado (IRQ 1) y se la
+habilita.<br>
+<h1><a name="Consola"></a><small><small><span style="font-weight: bold;">Consola</span></small></small></h1>
+
+El módulo de consola maneja el display VGA en modo texto con 25 líneas
+de 80 caracteres, escribiendo en la memoria de video. El sistema de
+coordenadas es el siguiente: <span style="font-weight: bold;">x</span> indica la posición horizontal o número de columna, de 0 a 79, e <span style="font-weight: bold;">y</span>
+indica la posición vertical o número de línea, de 0 a 24. El extremo
+superior izquierdo de la pantalla tiene las coordenadas x=0 e y=0. El
+extremo inferior derecho tiene x=79 e y=24. Vale decir que x se mide de
+izquierda a derecha, e y se mide de arriba hacia abajo.<br>
+<br>
+Los glifos de los caracteres son los del BIOS de la PC, es decir, corresponden a la página de código 437. <br>
+<br>
+Los caracteres pueden mostrarse con un color de texto (foreground) y un
+color de fondo (background). Los colores posibles forman la siguiente
+enumeración:<br>
+<br>
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">enum COLORS</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">{</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; /* oscuros */</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; BLACK,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; BLUE,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; GREEN,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; CYAN,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; RED,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; MAGENTA,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; BROWN,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; LIGHTGRAY,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; /* claros */</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; DARKGRAY,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; LIGHTBLUE,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; LIGHTGREEN,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; LIGHTCYAN,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; LIGHTRED,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; LIGHTMAGENTA,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; YELLOW,</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">&nbsp;&nbsp;&nbsp; WHITE</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">};</span><br style="color: rgb(51, 102, 255);">
+<br>
+Por defecto, el color de fondo es BLACK y el de texto LIGHTGRAY.<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_clear(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_clreol(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_clreom(void);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Estas funciones borran distintas partes de la memoria de video,
+poniendo en la zona borrada los atributos de color por defecto
+(LIGHTGRAY, BLACK). Mt_cons_clear() borra toda la pantalla y coloca el
+cursor en (0, 0); mt_cons_clreol() borra desde donde está el cursor
+hasta el final de la línea, y mt_cons_clreom() borra desde donde está
+el cursor hasta el final de la pantalla, en ambos casos sin modificar
+la posición del cursor. <br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned mt_cons_nrows(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned mt_cons_ncols(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned mt_cons_nscrolls(void);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Estas funciones&nbsp; devuelven la cantidad de filas (25) y columnas
+(80) del display, y la cantidad de veces que se desplazó la pantalla
+una línea hacia arriba (scrolling). El scrolling se produce
+automáticamente cuando se intenta escribir más allá del punto (79, 24)
+o el cursor está en la línea 24 y se intenta moverlo una línea más
+abajo.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_getxy(unsigned *x, unsigned *y);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_gotoxy(unsigned x, unsigned y);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<br>
+Permiten leer y establecer la posición del cursor.<br>
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold;"></span><br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_getattr(unsigned *fg, unsigned *bg);</span><br style="color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold;"><span style="color: rgb(51, 102, 255);">void mt_cons_setattr(unsigned fg, unsigned bg);</span><br style="color: rgb(51, 102, 255);">
+<br>
+</span>
+Permiten leer y establecer los atributos de color que se utilizarán en
+lo sucesivo para escribir caracteres en la pantalla. Los parámetros
+"fg" y "bg" significan "foreground" (color del texto) y "background"
+(color del fondo). Los colores tienen valores de la enumeración que se
+vio más arriba.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool mt_cons_cursor(bool on);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<br>
+Muestra u oculta el cursor, devolviendo el estado previo.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold;"></span><span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_putc(char ch);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_puts(const char *str);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<br>
+Escriben caracteres en la pantalla a partir de la posición del cursor y desplazan el cursor.
+Cuando la consola no está en modo crudo, se interpretan en forma
+especial los siguientes caracteres:<br>
+<ul>
+  <li>Retorno de carro (\r) : Coloca el cursor en el borde izquierdo.</li>
+  <li>Nueva línea (\n): Mueve el cursor una línea hacia abajo, o produce un scrolling si está en la línea 24.</li>
+  <li>Tabulador (\t): Escribe los espacios necesarios para llevar el cursor a una posición horizontal múltiplo de 8.</li>
+  <li>Backspace(0x08): Mueve el cursor un lugar hacia la izquierda, a menos que ya esté en el borde izquierdo.</li>
+</ul>
+Los demás caracteres no tienen ninguna interpretación especial y generan los glifos correspondientes.<br>
+&nbsp;<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool mt_cons_raw(bool on);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_cr(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_nl(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_tab(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void mt_cons_bs(void);</span><br style="color: rgb(51, 102, 255);">
+<br style="color: rgb(51, 102, 255);">
+La función mt_cons_raw() permite poner la consola en modo crudo,
+devolviendo el estado anterior. En este modo no se interpreta ningún
+carácter en forma especial, es decir, se generan glifos para cualquier
+valor de carácter. Cuando la consola está en modo crudo pueden
+utilizarse las funciones mt_cons_cr(), etc. para mover el cursor
+produciendo los mismos efectos que producen normalmente los caracteres
+especiales. Por ejemplo, ejecutar mt_cons_cr() produce el mismo efecto
+que un retorno de carro en el modo normal.<span style="font-weight: bold;"><br></span>
+<h1><a name="La_familia_printk"></a><small><small><span style="font-weight: bold;">
+La familia printk</span></small></small></h1>
+
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">int vprintk(const char *fmt, va_list args);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">int printk(const char *fmt, ...);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void cprintk(unsigned fg, unsigned bg, char *fmt, ...);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+
+<br>
+
+Printk() se ha utilizado tradicionalmente como printf() en el kernel, para imprimir directamente en consola.
+Aquí se da en dos variantes, printk() y vprintk(), a las cuales se
+agrega una tercera que permite imprimir con determinados atributos de
+color. Cprintk() modifica temporariamente los atributos de color de la
+consola, pero luego repone los valores originales.<br>
+<h1><a name="Teclado"></a><small><small><span style="font-weight: bold;">Teclado</span></small></small></h1>
+
+El módulo de teclado tiene capturada la interrupción de teclado (IRQ
+1). La rutina de interrupción lee los códigos del teclado (scan codes)
+y los coloca en una cola de mensajes. <br>
+<br>
+Una tarea de alta prioridad lee los códigos de esta cola y los procesa.
+El procesamiento consiste en atender teclas especiales como las teclas
+de función con sus posibles combinaciones con las teclas de control,
+alt izquierdo y alt derecho (esto no está implementado aún) y mapear
+los códigos que no son teclas especiales generando caracteres que pueda
+leer una aplicación. El mapeado se realiza utilizando los mapas de
+distribución de teclado de Minix (de hecho, una buena parte del código
+del driver está copiada casi literalmente de Minix). En la actualidad
+están soportadas las distrituciones de teclado "us-std" y "spanish",
+pero es muy simple agregar otras distribuciones. Los caracteres
+generados se colocan en una segunda cola de mensajes, para ser leídos
+desde allí por las aplicaciones.<br>
+<br>
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold;"></span><span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool mt_kbd_getch(unsigned *c);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool mt_kbd_getch_timed(unsigned *c, unsigned timeout);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Estas funciones leen un carácter de la cola de mensajes de caracteres, sin y con timeout.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">const char *mt_kbd_getlayout(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">bool mt_kbd_setlayout(const char *name);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">const char **mt_kbd_layouts(void);</span><br style="color: rgb(51, 102, 255);">
+<br>
+La primera función devuelve el nombre de la distribución de teclado
+actual, por ejemplo, "us-std". La segunda permite estaclecer una
+distribución. Actualmente el argumento debe ser "us-std" o "spanish".
+La tercera función devuelve una lista de las distribuciones
+disponibles, bajo la forma de un array de char * terminado en NULL;
+actualmente devuelve { "us-std", "spanish", NULL }.<br>
+<h1><a name="Leer_una_línea"></a><small><small><span style="font-weight: bold;">Leer una línea</span></small></small></h1>
+
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned mt_getline(char *buf, unsigned size);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Esta función se usa para leer una línea del teclado simulando la
+lectura de una terminal en modo canónico. Se le pasa un buffer y su tamaño,
+retorna una línea leída (terminada en cero) y la cantidad de caracteres
+leídos (sin contar el cero final). La entrada de la línea termina
+cuando se oprime ENTER, que genera un retorno de carro, o cuando se
+llena el buffer. Cuando el ingreso termina por la tecla ENTER, el
+retorno de carro aparece reemplazado por un carácter de nueva línea
+(\n). Mientras no termina el ingreso de la línea, puede utilizarse la
+tecla BACKSPACE para borrar los últimos caracteres ingresados. La función va haciendo eco
+sobre la pantalla mostrando en cada momento el estado del buffer,
+expandiendo los tabuladores sobre la pantalla (pero no en el buffer) y
+llevando cuenta de la posición del cursor en cada momento. Soporta el
+ingreso de líneas que ocupan más de una línea en la pantalla.<br>
+<br>
+El shell utiliza esta función para leer las líneas de comando.<br>
+<h1><a name="Funciones_de_biblioteca"></a><small><small><span style="font-weight: bold;">Funciones de biblioteca</span></small></small></h1>
+
+Por distintos motivos, quien escribe un kernel debe resignarse también
+a escribir su propia biblioteca de funciones standard de C, pues a
+menudo es difícil o imposible utilizar la biblioteca que viene con el
+compilador.
+Aparte de que la biblioteca del compilador suele hacer llamadas al
+sistema operativo para el cual está construída, aún las funciones que
+no las hacen a menudo dependen de ciertas inicializaciones y de cierto
+ambiente creado por el código de arranque de los programas, código que
+no se ejecuta cuando estamos construyendo un sistema operativo. <br>
+<br>
+En el desarrollo de MTask fue necesario definir algunas
+funciones de biblioteca comunes. Muchas han sido copiadas o adaptadas de distintas fuentes; en los
+archivos fuente se dan los créditos correspondientes. Algunas de estas
+funciones no son thread-safe, de modo que es mejor mirar los fuentes
+antes de usarlas.<br>
+<br>
+Las funciones de biblioteca son actualmente las siguientes:<br>
+<br>
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned inb(unsigned ioaddr);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void outb(unsigned ioaddr, unsigned data</span><span style="color: rgb(51, 102, 255);">);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Funciones de entrada/salida de 8 bits.<br>
+<br>
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">char *strcpy(char *dest, const char *src);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">char *strncpy(char *dest, const char *src, unsigned count);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">char *strcat(char *dest, const char *src);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">char *strncat(char *dest, const char *src, unsigned count);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">int strcmp(const char *cs, const char *ct);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">int strncmp(const char *cs, const char *ct, unsigned count);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">char *strchr(const char *s, int c);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">char *strrchr(const char *s, int c);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned strlen(const char *s);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned strnlen(const char *s, unsigned count);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void *memcpy(void *to, const void *from, unsigned n);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void *memmove(void *dest, const void *src, unsigned n);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void *memchr(const void *cs, int c, unsigned count);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void *memset(void *s, int c, unsigned count);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Biblioteca de strings.<br>
+<br style="font-family: Courier New,Courier,monospace; font-weight: bold;">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">int rand(void);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void srand(unsigned seed);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Generador de números aleatorios.<br>
+<br>
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">int vsprintf(char *buf, const char *fmt, va_list args);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">int sprintf(char *buf, const char *fmt, ...);</span><br style="color: rgb(51, 102, 255);">
+<br>
+La familia sprintf.<br>
+<br>
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void *malloc(unsigned nbytes);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">void free(void *ap);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<br>
+El manejador de memoria.<br>
+<br>
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">const char *setfs(const char *fs);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned split(char *s, char *field[], unsigned nfields);</span><br style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">unsigned separate(char *s, char *field[], unsigned nfields);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Separación de un string en tokens o campos, delimitados por espacio en
+blanco u otros separadores (split) o espacio en blanco y comillas (separate). El shell usa la función separate() para separar
+una línea de comando en argumentos. <br>
+<br>
+<span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);">int atoi(const char *s);</span><br style="color: rgb(51, 102, 255);">
+<br>
+Convertir un string en un número entero.<br>
+<br>
+<br>
+
+</div><span style="font-family: Courier New,Courier,monospace; font-weight: bold; color: rgb(51, 102, 255);"></span><span style="font-family: Verdana;"></span></body></html>
