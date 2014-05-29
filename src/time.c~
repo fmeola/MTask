@@ -80,6 +80,19 @@ void set_time(time_t * tp) {
     Unatomic();
 }
 
+void set_alarm(time_t * tp) {
+    Atomic();
+    outb(0x70, 0x05);
+    outb(0x71, tp->tm_hour);
+    outb(0x70, 0x03);
+    outb(0x71, tp->tm_min);
+    outb(0x70, 0x01);
+    outb(0x71, tp->tm_sec);
+    outb(0x70, 0x0D);
+    outb(0x71, tp->tm_mday);
+    Unatomic();
+}
+
 void reset_time() {
     int i;
     Atomic();
@@ -159,15 +172,42 @@ int time_main(int argc, char * argv[]) {
     char timeString[24];
     time_t t;
     if(argc > 1) {
-        if(!strcmp(argv[1], "-reset"))
+        if(!strcmp(argv[1], "-reset")) {
             reset_time();
+            return 0;
+        }
         if(!strcmp(argv[1], "-set")) {
             if(argc == 8) {
                 set_time_wrapper(atoi(argv[2]), atoi(argv[3]), atoi(argv[4]),
                     atoi(argv[5]), atoi(argv[6]), atoi(argv[7]));
-                return;
+                return 0;
             }
         }
+        if(!strcmp(argv[1], "-f12")) {
+            set_register_bit(0x0B, 1, 0);
+            return 0;
+        }
+        if(!strcmp(argv[1], "-f24")) {
+            set_register_bit(0x0B, 1, 1);
+            return 0;
+        }
+        if(!strcmp(argv[1], "-alarm")) {
+            if(argc == 6) {
+                //void (*f) (unsiged);
+                //f = alarm_handler;
+                set_register_bit(0x0B, 5, 1);
+                printk("1\n");
+                set_alarm_wrapper(atoi(argv[2]), atoi(argv[3]), atoi(argv[4]), 
+                    atoi(argv[5]));
+                printk("2\n");
+                mt_enable_irq(8);
+                printk("3\n");
+                mt_set_int_handler(8, alarm_handler);
+                printk("4\n");
+                return 0;
+            }
+        }
+        
     }
     read_time(&t);
     printk("%s\n", asctime(timeString, &t));
@@ -188,6 +228,19 @@ void set_time_wrapper(int hour, int min, int sec, int day, int mon, int year) {
     t.tm_year = toBCD(year);
     t.tm_wday = 0; // TODO Arreglar dia de la semana.
     set_time(&t);
+}
+
+void set_alarm_wrapper(int hour, int min, int sec, int day) {
+    time_t t;
+    t.tm_hour = toBCD(hour);
+    t.tm_min = toBCD(min);
+    t.tm_sec = toBCD(sec);
+    t.tm_mday = toBCD(day);
+    set_alarm(&t);
+}
+
+void alarm_handler(unsigned irq_number) {
+    printk("RING!");
 }
 
 
