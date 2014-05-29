@@ -28,7 +28,7 @@ const char *_months_abbrev[] = {
 };
 
 
-void time(time_t * tp) {
+void read_time(time_t * tp) {
     Atomic();
     outb(0x70, 4);
     tp->tm_hour = inb(0x71);
@@ -46,6 +46,77 @@ void time(time_t * tp) {
     tp->tm_year = inb(0x71);
     Unatomic();
     return;
+}
+
+void set_register_bit(int register_address, int bit, int set) {
+    int r;
+    Atomic();
+    outb(0x70, register_address);
+    r = inb(0x71);
+    outb(0x70, register_address);
+    if(set)
+        outb(0x71, set_bit(r, bit));
+    else
+        outb(0x71, clear_bit(r, bit));
+    Unatomic();
+}
+
+void set_time(time_t * tp) {
+    Atomic();
+    outb(0x70, 4);
+    outb(0x71, tp->tm_hour);
+    outb(0x70, 2);
+    outb(0x71, tp->tm_min);
+    outb(0x70, 0);
+    outb(0x71, tp->tm_sec);
+    outb(0x70, 6);
+    outb(0x71, tp->tm_wday);
+    outb(0x70, 7);
+    outb(0x71, tp->tm_mday);
+    outb(0x70, 8);
+    outb(0x71, tp->tm_mon);
+    outb(0x70, 9);
+    outb(0x71, tp->tm_year);
+    Unatomic();
+}
+
+void reset_time() {
+    int i;
+    Atomic();
+    for(i = 0; i < 10; i++) {
+        outb(0x70, i);
+        outb(0x71, 0);
+    }
+    Unatomic();
+}
+
+void set_time_format(int fmt) {
+    int register_b;
+    Atomic();
+    outb(0x70, 0x0B);
+    register_b = inb(0x71);
+    outb(0x70, 0x0B);
+    if(fmt)
+        outb(0x71, set_bit(register_b, 1));
+    else
+        outb(0x71, clear_bit(register_b, 1));
+    Unatomic();
+}
+
+int set_bit(int byte, int bit) {
+    return byte | pow(2, bit);
+}
+
+int clear_bit(int byte, int bit) {
+    return byte & !pow(2, bit);
+}
+
+int pow(int b, int e) {
+    int i;
+    int res = 1;
+    for(i = 0; i < e; i++)
+        res *= b;
+    return res;
 }
 
 char * asctime(char * str_time, const time_t * tp) {
@@ -87,9 +158,38 @@ char * asctime(char * str_time, const time_t * tp) {
 int time_main(int argc, char * argv[]) {
     char timeString[24];
     time_t t;
-    time(&t);
-    printk("%s.\n", asctime(timeString, &t));
+    if(argc > 1) {
+        if(!strcmp(argv[1], "-reset"))
+            reset_time();
+        if(!strcmp(argv[1], "-set")) {
+            if(argc == 8) {
+                set_time_wrapper(atoi(argv[2]), atoi(argv[3]), atoi(argv[4]),
+                    atoi(argv[5]), atoi(argv[6]), atoi(argv[7]));
+                return;
+            }
+        }
+    }
+    read_time(&t);
+    printk("%s\n", asctime(timeString, &t));
     return 0;
 }
+
+int toBCD(int n) {
+    return ((n / 10) << 4)|(n% 10);
+}
+
+void set_time_wrapper(int hour, int min, int sec, int day, int mon, int year) {
+    time_t t;
+    t.tm_hour = toBCD(hour);
+    t.tm_min = toBCD(min);
+    t.tm_sec = toBCD(sec);
+    t.tm_mday = toBCD(day);
+    t.tm_mon = toBCD(mon - 1);
+    t.tm_year = toBCD(year);
+    t.tm_wday = 0; // TODO Arreglar dia de la semana.
+    set_time(&t);
+}
+
+
 
 

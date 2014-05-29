@@ -184,7 +184,7 @@ LOAD obj/time.o
  *(.iplt)
  .iplt          0x0000000000000000        0x0 obj/kstart.o
 
-.text           0x0000000000100100     0x8bff
+.text           0x0000000000100100     0x90cc
  *(.text.unlikely .text.*_unlikely .text.unlikely.*)
  *(.text.exit .text.exit.*)
  *(.text.startup .text.startup.*)
@@ -401,130 +401,139 @@ LOAD obj/time.o
                 0x000000000010873c                atomic_phil_main
  .text          0x00000000001088c5       0xf1 obj/divz.o
                 0x00000000001088ff                divz_main
- .text          0x00000000001089b6      0x349 obj/time.o
-                0x00000000001089b6                time
-                0x0000000000108ae0                asctime
-                0x0000000000108cc5                time_main
+ .text          0x00000000001089b6      0x816 obj/time.o
+                0x00000000001089b6                read_time
+                0x0000000000108ae0                set_register_bit
+                0x0000000000108b73                set_time
+                0x0000000000108caa                reset_time
+                0x0000000000108cf6                set_time_format
+                0x0000000000108d8d                set_bit
+                0x0000000000108dab                clear_bit
+                0x0000000000108dd1                pow
+                0x0000000000108e02                asctime
+                0x0000000000108fe7                time_main
+                0x0000000000109110                toBCD
+                0x000000000010915b                set_time_wrapper
  *(.gnu.warning)
 
 .fini
  *(SORT(.fini))
-                0x0000000000108cff                PROVIDE (__etext, .)
-                0x0000000000108cff                PROVIDE (_etext, .)
-                0x0000000000108cff                PROVIDE (etext, .)
+                0x00000000001091cc                PROVIDE (__etext, .)
+                0x00000000001091cc                PROVIDE (_etext, .)
+                0x00000000001091cc                PROVIDE (etext, .)
 
-.rodata         0x0000000000108d00      0xa54
+.rodata         0x00000000001091d0      0xa5f
  *(.rodata .rodata.* .gnu.linkonce.r.*)
- .rodata        0x0000000000108d00       0xd8 obj/kernel.o
- .rodata        0x0000000000108dd8       0x55 obj/irq.o
- *fill*         0x0000000000108e2d        0x3 
- .rodata        0x0000000000108e30      0x188 obj/sprintf.o
- .rodata        0x0000000000108fb8       0x29 obj/mutex.o
- *fill*         0x0000000000108fe1        0x3 
- .rodata        0x0000000000108fe4       0xff obj/monitor.o
- .rodata        0x00000000001090e3        0xe obj/pipe.o
- *fill*         0x00000000001090f1        0x3 
- .rodata        0x00000000001090f4       0x2f obj/msgqueue.o
- *fill*         0x0000000000109123        0x1 
- .rodata        0x0000000000109124       0x4e obj/filo.o
- *fill*         0x0000000000109172        0x2 
- .rodata        0x0000000000109174       0x4e obj/sfilo.o
- *fill*         0x00000000001091c2        0x2 
- .rodata        0x00000000001091c4       0x4e obj/xfilo.o
- .rodata        0x0000000000109212       0x2e obj/keyboard.o
- .rodata        0x0000000000109240        0xf obj/getline.o
- .rodata        0x000000000010924f       0xc4 obj/shell.o
- .rodata        0x0000000000109313        0x1 obj/split.o
- .rodata        0x0000000000109314       0x62 obj/setkb.o
- *fill*         0x0000000000109376        0x2 
- .rodata        0x0000000000109378       0x88 obj/camino.o
- .rodata        0x0000000000109400       0xa0 obj/camino_ns.o
- .rodata        0x00000000001094a0      0x116 obj/prodcons.o
- *fill*         0x00000000001095b6        0x2 
- .rodata        0x00000000001095b8       0x4e obj/afilo.o
- *fill*         0x0000000000109606        0x2 
- .rodata        0x0000000000109608       0x6b obj/divz.o
- .rodata        0x0000000000109673       0xe1 obj/time.o
+ .rodata        0x00000000001091d0       0xd8 obj/kernel.o
+ .rodata        0x00000000001092a8       0x55 obj/irq.o
+ *fill*         0x00000000001092fd        0x3 
+ .rodata        0x0000000000109300      0x188 obj/sprintf.o
+ .rodata        0x0000000000109488       0x29 obj/mutex.o
+ *fill*         0x00000000001094b1        0x3 
+ .rodata        0x00000000001094b4       0xff obj/monitor.o
+ .rodata        0x00000000001095b3        0xe obj/pipe.o
+ *fill*         0x00000000001095c1        0x3 
+ .rodata        0x00000000001095c4       0x2f obj/msgqueue.o
+ *fill*         0x00000000001095f3        0x1 
+ .rodata        0x00000000001095f4       0x4e obj/filo.o
+ *fill*         0x0000000000109642        0x2 
+ .rodata        0x0000000000109644       0x4e obj/sfilo.o
+ *fill*         0x0000000000109692        0x2 
+ .rodata        0x0000000000109694       0x4e obj/xfilo.o
+ .rodata        0x00000000001096e2       0x2e obj/keyboard.o
+ .rodata        0x0000000000109710        0xf obj/getline.o
+ .rodata        0x000000000010971f       0xc4 obj/shell.o
+ .rodata        0x00000000001097e3        0x1 obj/split.o
+ .rodata        0x00000000001097e4       0x62 obj/setkb.o
+ *fill*         0x0000000000109846        0x2 
+ .rodata        0x0000000000109848       0x88 obj/camino.o
+ .rodata        0x00000000001098d0       0xa0 obj/camino_ns.o
+ .rodata        0x0000000000109970      0x116 obj/prodcons.o
+ *fill*         0x0000000000109a86        0x2 
+ .rodata        0x0000000000109a88       0x4e obj/afilo.o
+ *fill*         0x0000000000109ad6        0x2 
+ .rodata        0x0000000000109ad8       0x6b obj/divz.o
+ .rodata        0x0000000000109b43       0xec obj/time.o
 
 .rodata1
  *(.rodata1)
 
-.eh_frame_hdr   0x0000000000109754      0x8f4
+.eh_frame_hdr   0x0000000000109c30      0x93c
  *(.eh_frame_hdr)
- .eh_frame_hdr  0x0000000000109754      0x8f4 obj/kernel.o
+ .eh_frame_hdr  0x0000000000109c30      0x93c obj/kernel.o
 
-.eh_frame       0x000000000010a048     0x2468
+.eh_frame       0x000000000010a56c     0x259c
  *(.eh_frame)
- .eh_frame      0x000000000010a048      0x58c obj/kernel.o
- .eh_frame      0x000000000010a5d4       0x60 obj/gdt_idt.o
+ .eh_frame      0x000000000010a56c      0x58c obj/kernel.o
+ .eh_frame      0x000000000010aaf8       0x60 obj/gdt_idt.o
                                          0x78 (size before relaxing)
- .eh_frame      0x000000000010a634      0x140 obj/irq.o
+ .eh_frame      0x000000000010ab58      0x140 obj/irq.o
                                         0x158 (size before relaxing)
- .eh_frame      0x000000000010a774      0x244 obj/string.o
+ .eh_frame      0x000000000010ac98      0x244 obj/string.o
                                         0x25c (size before relaxing)
- .eh_frame      0x000000000010a9b8      0x1ec obj/sprintf.o
+ .eh_frame      0x000000000010aedc      0x1ec obj/sprintf.o
                                         0x204 (size before relaxing)
- .eh_frame      0x000000000010aba4       0x60 obj/malloc.o
+ .eh_frame      0x000000000010b0c8       0x60 obj/malloc.o
                                          0x78 (size before relaxing)
- .eh_frame      0x000000000010ac04      0x2a8 obj/cons.o
+ .eh_frame      0x000000000010b128      0x2a8 obj/cons.o
                                         0x2c0 (size before relaxing)
- .eh_frame      0x000000000010aeac       0x20 obj/timer.o
+ .eh_frame      0x000000000010b3d0       0x20 obj/timer.o
                                          0x38 (size before relaxing)
- .eh_frame      0x000000000010aecc      0x100 obj/queue.o
+ .eh_frame      0x000000000010b3f0      0x100 obj/queue.o
                                         0x118 (size before relaxing)
- .eh_frame      0x000000000010afcc       0x44 obj/math.o
+ .eh_frame      0x000000000010b4f0       0x44 obj/math.o
                                          0x5c (size before relaxing)
- .eh_frame      0x000000000010b010      0x100 obj/sem.o
+ .eh_frame      0x000000000010b534      0x100 obj/sem.o
                                         0x118 (size before relaxing)
- .eh_frame      0x000000000010b110       0xc0 obj/mutex.o
+ .eh_frame      0x000000000010b634       0xc0 obj/mutex.o
                                          0xd8 (size before relaxing)
- .eh_frame      0x000000000010b1d0      0x180 obj/monitor.o
+ .eh_frame      0x000000000010b6f4      0x180 obj/monitor.o
                                         0x198 (size before relaxing)
- .eh_frame      0x000000000010b350      0x128 obj/pipe.o
+ .eh_frame      0x000000000010b874      0x128 obj/pipe.o
                                         0x140 (size before relaxing)
- .eh_frame      0x000000000010b478      0x160 obj/msgqueue.o
+ .eh_frame      0x000000000010b99c      0x160 obj/msgqueue.o
                                         0x178 (size before relaxing)
- .eh_frame      0x000000000010b5d8       0x60 obj/rand.o
+ .eh_frame      0x000000000010bafc       0x60 obj/rand.o
                                          0x78 (size before relaxing)
- .eh_frame      0x000000000010b638      0x184 obj/filo.o
+ .eh_frame      0x000000000010bb5c      0x184 obj/filo.o
                                         0x19c (size before relaxing)
- .eh_frame      0x000000000010b7bc      0x164 obj/sfilo.o
+ .eh_frame      0x000000000010bce0      0x164 obj/sfilo.o
                                         0x17c (size before relaxing)
- .eh_frame      0x000000000010b920      0x184 obj/xfilo.o
+ .eh_frame      0x000000000010be44      0x184 obj/xfilo.o
                                         0x19c (size before relaxing)
- .eh_frame      0x000000000010baa4      0x15c obj/keyboard.o
+ .eh_frame      0x000000000010bfc8      0x15c obj/keyboard.o
                                         0x174 (size before relaxing)
- .eh_frame      0x000000000010bc00       0x60 obj/printk.o
+ .eh_frame      0x000000000010c124       0x60 obj/printk.o
                                          0x78 (size before relaxing)
- .eh_frame      0x000000000010bc60       0x20 obj/getline.o
+ .eh_frame      0x000000000010c184       0x20 obj/getline.o
                                          0x38 (size before relaxing)
- .eh_frame      0x000000000010bc80       0x20 obj/shell.o
+ .eh_frame      0x000000000010c1a4       0x20 obj/shell.o
                                          0x38 (size before relaxing)
- .eh_frame      0x000000000010bca0       0xc0 obj/split.o
+ .eh_frame      0x000000000010c1c4       0xc0 obj/split.o
                                          0xd8 (size before relaxing)
- .eh_frame      0x000000000010bd60       0x20 obj/setkb.o
+ .eh_frame      0x000000000010c284       0x20 obj/setkb.o
                                          0x38 (size before relaxing)
- .eh_frame      0x000000000010bd80      0x1fc obj/camino.o
+ .eh_frame      0x000000000010c2a4      0x1fc obj/camino.o
                                         0x214 (size before relaxing)
- .eh_frame      0x000000000010bf7c      0x1bc obj/camino_ns.o
+ .eh_frame      0x000000000010c4a0      0x1bc obj/camino_ns.o
                                         0x1d4 (size before relaxing)
- .eh_frame      0x000000000010c138       0x20 obj/atoi.o
+ .eh_frame      0x000000000010c65c       0x20 obj/atoi.o
                                          0x38 (size before relaxing)
- .eh_frame      0x000000000010c158      0x114 obj/prodcons.o
+ .eh_frame      0x000000000010c67c      0x114 obj/prodcons.o
                                         0x12c (size before relaxing)
- .eh_frame      0x000000000010c26c      0x184 obj/afilo.o
+ .eh_frame      0x000000000010c790      0x184 obj/afilo.o
                                         0x19c (size before relaxing)
- .eh_frame      0x000000000010c3f0       0x60 obj/divz.o
+ .eh_frame      0x000000000010c914       0x60 obj/divz.o
                                          0x78 (size before relaxing)
- .eh_frame      0x000000000010c450       0x60 obj/time.o
-                                         0x78 (size before relaxing)
+ .eh_frame      0x000000000010c974      0x194 obj/time.o
+                                        0x1ac (size before relaxing)
 
 .gcc_except_table
  *(.gcc_except_table .gcc_except_table.*)
 
 .exception_ranges
  *(.exception_ranges .exception_ranges*)
-                0x000000000010c4b0                . = (ALIGN (0x1000) - ((0x1000 - .) & 0xfff))
+                0x000000000010cb08                . = (ALIGN (0x1000) - ((0x1000 - .) & 0xfff))
                 0x000000000010e000                . = DATA_SEGMENT_ALIGN (0x1000, 0x1000)
 
 .eh_frame
