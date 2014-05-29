@@ -13,6 +13,6 @@ int prodcons_main(int argc, char *argv[]);			// prodcons.c
 int divz_main(int argc, char *argv[]);				// divz.c
 
 // Agregados
-int time_main(int argc, char *argv[]);              // time.c
+int time_main(int argc, char *argv[]);
 
 #endif
