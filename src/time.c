@@ -157,18 +157,20 @@ int pow(int b, int e) {
     return res;
 }
 
-char * asctime(char * str_time, const time_t * tp) {
+char * asctime(char * str_time, const time_t * tp, int fmt) {
     // Thu May 29 11:35:33 2014
     char time[9];
     int wday, mon;
     char day[3];
     char year[3];
-    wday = ((tp->tm_wday & 0xF0) >> 4) * 10 + (tp->tm_wday & 0x0F);
-    strcpy(str_time, _days_abbrev[wday]);
-    strcat(str_time, " ");
-    mon = ((tp->tm_mon & 0xF0) >> 4) * 10 + (tp->tm_mon & 0x0F);
-    strcat(str_time, _months_abbrev[mon]);
-    strcat(str_time, " ");
+    if(fmt) {
+        wday = ((tp->tm_wday & 0xF0) >> 4) * 10 + (tp->tm_wday & 0x0F);
+        strcpy(str_time, _days_abbrev[wday]);
+        strcat(str_time, " ");
+        mon = ((tp->tm_mon & 0xF0) >> 4) * 10 + (tp->tm_mon & 0x0F);
+        strcat(str_time, _months_abbrev[mon]);
+        strcat(str_time, " ");
+    }
     day[0] = ((tp->tm_mday & 0xF0) >> 4) + '0';
     day[1] = ((tp->tm_mday & 0x0F)) + '0';
     day[2] = 0;
@@ -185,16 +187,18 @@ char * asctime(char * str_time, const time_t * tp) {
     time[8] = 0;
     strcat(str_time, time);
     strcat(str_time, " ");
-    year[0] = ((tp->tm_year & 0xF0) >> 4) + '0';
-    year[1] = ((tp->tm_year & 0x0F)) + '0';
-    year[2] = 0;
-    strcat(str_time, "20");
-    strcat(str_time, year);
+    if(fmt) {
+        year[0] = ((tp->tm_year & 0xF0) >> 4) + '0';
+        year[1] = ((tp->tm_year & 0x0F)) + '0';
+        year[2] = 0;
+        strcat(str_time, "20");
+        strcat(str_time, year);
+    }
     return str_time;
 }
 
 int time_main(int argc, char * argv[]) {
-    char timeString[24];
+    char timeString[24] = {0};
     time_t t;
     if(argc > 1) {
         if(!strcmp(argv[1], "-reset")) {
@@ -250,13 +254,12 @@ int time_main(int argc, char * argv[]) {
             }
             ToBegin(alarms);
             while((a = NextElement(alarms)) != NULL)
-                printk("%d - %s - %s\n", a->id, asctime(timeString, &(a->date)), a->name);
+                printk("%s @ %s\n", a->name, asctime(timeString, &(a->date), 0));
             return 0;
         }
-        
     }
     read_time(&t);
-    printk("%s\n", asctime(timeString, &t));
+    printk("%s\n", asctime(timeString, &t, 1));
     return 0;
 }
 

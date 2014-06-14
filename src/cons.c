@@ -12,7 +12,7 @@
 #define CRT_CURSOR_HIGH 0x0E
 #define CRT_CURSOR_LOW 0x0F
 
-#define DEFATTR ((BLACK << 12) | (LIGHTGRAY << 8))
+#define DEFATTR ((BLACK << 12) | (WHITE << 8))
 
 #define BS 0x08
 

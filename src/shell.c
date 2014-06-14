@@ -3,7 +3,7 @@
 
 #define BUFSIZE 200
 #define NARGS 20
-#define PROMPT "HugOX> "
+#define PROMPT "AlamOS> "
 
 static struct cmdentry
 {
@@ -38,8 +38,8 @@ shell_main(int argc, char **argv)
 	mt_cons_getattr(&fg, &bg);
 	while ( true )
 	{
-		mt_cons_setattr(LIGHTGRAY, BLACK);
-		cprintk(LIGHTCYAN, BLACK, PROMPT);
+		mt_cons_setattr(WHITE, BLACK);
+		cprintk(WHITE, BLACK, PROMPT);
 
 		/* leer linea de comando, fraccionarla en tokens y armar argv */
 		mt_getline(buf, sizeof buf);

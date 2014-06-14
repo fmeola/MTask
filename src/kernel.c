@@ -911,7 +911,7 @@ mt_main(void)
 	// Ejecutar primera tarea
 	while ( true )
 	{
-		cprintk(LIGHTCYAN, BLACK, "MTask inicializado.\n");
+		cprintk(WHITE, BLACK, "MTask inicializado.\n");
 		char *arg[] = { "shell", NULL };
 		shell_main(1, arg);
 	}

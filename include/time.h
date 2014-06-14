@@ -23,7 +23,7 @@ typedef struct {
 void time(time_t * tp);
 
 /* Convierte a una cadena de texto el tiempo */
-char * asctime(char * str_time, const time_t * tp);
+char * asctime(char * str_time, const time_t * tp, int fmt);
 
 /* Alarm Handler */
 void alarm_handler(unsigned irq_number);
