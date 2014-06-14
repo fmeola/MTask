@@ -6,7 +6,7 @@ NASM_FLAGS = -f elf32 -I $(INCLUDE_DIR)
 MODULES = kstart libasm interrupts kernel gdt_idt irq string sprintf malloc \
 			cons io timer queue math sem mutex monitor pipe msgqueue rand \
 			filo sfilo xfilo keyboard printk getline shell split setkb camino \
-			camino_ns atoi prodcons afilo divz time
+			camino_ns atoi prodcons afilo divz time genlistADT
 
 OBJECTS = $(MODULES:%=obj/%.o)
 mtask: $(OBJECTS)

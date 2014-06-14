@@ -1,5 +1,6 @@
 #include "kernel.h"
 #include "../include/time.h"
+#include "../include/genlistADT.h"
 
 /* Fuente consultada: http://wiki.osdev.org/RTC */
 
@@ -27,6 +28,8 @@ const char *_months_abbrev[] = {
   "Oct", "Nov", "Dec"
 };
 
+static listADT alarms = NULL;
+static int alarmCount = 0;
 
 void read_time(time_t * tp) {
     Atomic();
@@ -195,17 +198,38 @@ int time_main(int argc, char * argv[]) {
             if(argc == 6) {
                 //void (*f) (unsiged);
                 //f = alarm_handler;
+                if(alarms == NULL)
+                    alarms = NewList(sizeof(alarm), (int(*)(void *, void *)) compAlarm);
+                time_t newAlarm;
+                newAlarm.tm_hour = toBCD(atoi(argv[2]));
+                newAlarm.tm_min = toBCD(atoi(argv[3]));
+                newAlarm.tm_sec = toBCD(atoi(argv[4]));
+                newAlarm.tm_mday = toBCD(atoi(argv[5]));
+                alarm a;
+                alarm * first;
+                a.id = alarmCount++;
+                a.name = "hola";
+                a.date = newAlarm;
+                Insert(alarms, &a);
+                ToBegin(alarms);
+                first = NextElement(alarms);
                 set_register_bit(0x0B, 5, 1);
-                printk("1\n");
-                set_alarm_wrapper(atoi(argv[2]), atoi(argv[3]), atoi(argv[4]), 
-                    atoi(argv[5]));
-                printk("2\n");
+                set_alarm(&(first -> date));
                 mt_enable_irq(8);
-                printk("3\n");
                 mt_set_int_handler(8, alarm_handler);
-                printk("4\n");
                 return 0;
             }
+        }
+        if(!strcmp(argv[1], "-l")) {
+            alarm * a;
+            if(alarms == NULL || ListIsEmpty(alarms)) {
+                printk("No hay alarmas.\n");
+                return 0;
+            }
+            ToBegin(alarms);
+            while((a = NextElement(alarms)) != NULL)
+                printk("%d - %s - %s\n", a->id, asctime(timeString, &(a->date)), a->name);
+            return 0;
         }
         
     }
@@ -214,8 +238,32 @@ int time_main(int argc, char * argv[]) {
     return 0;
 }
 
+/* Funcion de comparacion de enteros para ordenar en forma descendente */
+int compAlarm(alarm *a1, alarm *a2) {
+    int diff;
+    long a1secs = fromBCD((a1->date).tm_mday) * 86400 + 
+        fromBCD((a1->date).tm_hour) * 3600 + 
+        fromBCD((a1->date).tm_min) * 60 + 
+        fromBCD((a1->date).tm_sec);
+    long a2secs = fromBCD((a2->date).tm_mday) * 86400 +
+        fromBCD((a2->date).tm_hour) * 3600 +
+        fromBCD((a2->date).tm_min) * 60 +
+        fromBCD((a2->date).tm_sec);
+    diff = a1secs - a2secs;
+    if(diff > 0)
+        return 1;
+    if(diff < 0)
+        return -1;
+    return 0;
+}
+
+
 int toBCD(int n) {
     return ((n / 10) << 4)|(n% 10);
+}
+
+int fromBCD(int n) {
+    return ((n & 0xF0) >> 4) * 10 + (n & 0x0F);
 }
 
 void set_time_wrapper(int hour, int min, int sec, int day, int mon, int year) {
@@ -240,7 +288,23 @@ void set_alarm_wrapper(int hour, int min, int sec, int day) {
 }
 
 void alarm_handler(unsigned irq_number) {
-    printk("RING!");
+    alarm * first;
+    int register_c;
+    outb(0x70, 0x0C);
+    register_c = inb(0x71);
+    printk("RING!\n");
+    ToBegin(alarms);
+    first = NextElement(alarms);
+    printk("%d: %s\n", first->id, first->name);
+    Delete(alarms, first);
+    ToBegin(alarms);
+    first = NextElement(alarms);
+    if(first != NULL) {
+        printk("Seteando RTC...\n");
+        set_register_bit(0x0B, 5, 1);
+        set_alarm(&(first -> date));
+    }
+    return;
 }
 
 

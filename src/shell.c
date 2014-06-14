@@ -3,7 +3,7 @@
 
 #define BUFSIZE 200
 #define NARGS 20
-#define PROMPT "AlamOS> "
+#define PROMPT "HugOX> "
 
 static struct cmdentry
 {

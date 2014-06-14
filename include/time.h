@@ -13,6 +13,12 @@ typedef struct {
     int tm_isdst;       /* daylight saving time */
 } time_t;
 
+typedef struct {
+	int id;
+	char * name;
+	time_t date;
+} alarm;
+
 /* Guarda el tiempo en la estructura */
 void time(time_t * tp);
 
@@ -35,6 +41,9 @@ void set_alarm(time_t * tp);
 void set_time(time_t * tp);
 void set_register_bit(int register_address, int bit, int set);
 void read_time(time_t * tp);
+
+int compAlarm(alarm *n, alarm *m);
+int fromBCD(int n) ;
 
 
 
