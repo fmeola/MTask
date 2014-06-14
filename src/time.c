@@ -1,8 +1,30 @@
 #include "kernel.h"
 #include "../include/time.h"
 #include "../include/genlistADT.h"
+#include "apps.h"
 
 /* Fuente consultada: http://wiki.osdev.org/RTC */
+
+static struct cmdentry
+{
+    char *name;
+    int (*func)(int argc, char **argv);
+}
+cmdtab[] =
+{
+    {   "setkb",        setkb_main },
+    {   "shell",        shell_main },
+    {   "sfilo",        simple_phil_main },
+    {   "filo",         phil_main },
+    {   "xfilo",        extra_phil_main },
+    {   "afilo",        atomic_phil_main },
+    {   "camino",       camino_main },
+    {   "camino_ns",    camino_ns_main },
+    {   "prodcons",     prodcons_main },
+    {   "divz",         divz_main },
+    {   "date",         time_main },
+    { }
+};
 
 const char *_days[] = {
   "Sunday", "Monday", "Tuesday", "Wednesday",
@@ -195,7 +217,7 @@ int time_main(int argc, char * argv[]) {
             return 0;
         }
         if(!strcmp(argv[1], "-alarm")) {
-            if(argc == 6) {
+            if(argc == 7) {
                 //void (*f) (unsiged);
                 //f = alarm_handler;
                 if(alarms == NULL)
@@ -208,7 +230,7 @@ int time_main(int argc, char * argv[]) {
                 alarm a;
                 alarm * first;
                 a.id = alarmCount++;
-                a.name = "hola";
+                a.name = argv[6];
                 a.date = newAlarm;
                 Insert(alarms, &a);
                 ToBegin(alarms);
@@ -223,7 +245,7 @@ int time_main(int argc, char * argv[]) {
         if(!strcmp(argv[1], "-l")) {
             alarm * a;
             if(alarms == NULL || ListIsEmpty(alarms)) {
-                printk("No hay alarmas.\n");
+                cprintk(LIGHTRED, BLACK, "No hay alarmas.\n");
                 return 0;
             }
             ToBegin(alarms);
@@ -288,23 +310,39 @@ void set_alarm_wrapper(int hour, int min, int sec, int day) {
 }
 
 void alarm_handler(unsigned irq_number) {
+    struct cmdentry *cp;
+
     alarm * first;
-    int register_c;
+    int register_c;         /* Leo el registro C para aceptar futuras interrupciones */
     outb(0x70, 0x0C);
     register_c = inb(0x71);
     printk("RING!\n");
     ToBegin(alarms);
     first = NextElement(alarms);
     printk("%d: %s\n", first->id, first->name);
+    
+    /* aplicaciones */
+    bool found = false;
+    for ( cp = cmdtab ; cp->name ; cp++ )
+        if ( strcmp(first->name, cp->name) == 0 )
+        {
+            found = true;
+            int n = cp->func(1, NULL);
+            if ( n != 0 )
+                cprintk(LIGHTRED, BLACK, "Status: %d\n", n);
+            break;
+        }
+
+    if ( !found )
+        cprintk(LIGHTRED, BLACK, "Comando %s desconocido\n", first->name);
+
     Delete(alarms, first);
     ToBegin(alarms);
     first = NextElement(alarms);
     if(first != NULL) {
-        printk("Seteando RTC...\n");
-        set_register_bit(0x0B, 5, 1);
+        set_register_bit(0x0B, 5, 1); /* Habilito interrupcion de alarma. */
         set_alarm(&(first -> date));
     }
-    return;
 }
 
 
