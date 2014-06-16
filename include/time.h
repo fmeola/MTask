@@ -44,6 +44,7 @@ void read_time(time_t * tp);
 
 int compAlarm(alarm *n, alarm *m);
 int fromBCD(int n) ;
+void printHusos(void);
 
 
 

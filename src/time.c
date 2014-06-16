@@ -3,6 +3,8 @@
 #include "../include/genlistADT.h"
 #include "apps.h"
 
+#define DEFAULT_HUSO 1
+
 /* Fuente consultada: http://wiki.osdev.org/RTC */
 
 static struct cmdentry
@@ -50,8 +52,55 @@ const char *_months_abbrev[] = {
   "Oct", "Nov", "Dec"
 };
 
+const char * map[] = {
+    ".. . . . . . . . . . . . . . . . . . . . . . . . . . . . .\n",
+    ".. . . . . . . .#######. . . . . . . . . . . . . . . . . .\n",
+    ".. . . . . . .#. .#### . . . ####. . .###############. . .\n",
+    ".. . ########. ##. ##. . . #####9################### . . .\n",
+    ".. . . ##########. . . . 6#####################. . . . . .\n",
+    ".. . . .4######5 . . . .   ################### . . . . . .\n",
+    ".. . . . ### .   . . . .#####. ##############. 8 . . . . .\n",
+    ".. . . . . 3#### . . . .#######. ##########. . . . . . . .\n",
+    ".. . . . . .###### . . . .#### . . . . .## . . . . . . . .\n",
+    ".. . . . . . ####2 . . . .#### # . . . . . ##### . . . . .\n",
+    ".. . . . . . ##1 . . . . . ##. . . . . . . . ##7 .#. . . .\n",
+    ".. . . . . . ##. . . . . . . . . . . . . . . . . . . . . .\n",
+    ".. . . . . . . . . . . . . . . . . . . . . . . . . . . . .\n"
+};
+
+typedef struct
+{
+    int id;
+    char * city;
+    char * code;
+    int diff;
+} huso;
+
+const huso husos[] =
+{
+    { 1, "Buenos Aires", "ART",  -3 },
+    { 2, "Rio de Janeiro", "BRT", -3 },
+    { 3, "Mexico DF", "CDT",-6 },
+    { 4, "San Francisco", "PDT",-8 },
+    { 5, "Washington DC", "EDT",-5 },
+    { 6, "Londres", "BST",0 },
+    { 7, "Sidney", "MDT",+10 },
+    { 8, "Tokio", "JST",+9 },
+    { 9, "Moscu", "MSK",+4 }
+};
+
+static bool fmt12 = false;
+static int currentHuso = 1;
 static listADT alarms = NULL;
 static int alarmCount = 0;
+
+void printHusos(void) {
+    int i;
+    for(i = 0; i < sizeof(map)/sizeof(map[0]); i++)
+        printk("%s", map[i]);
+    for(i = 0; i < sizeof(husos)/sizeof(huso); i++)
+        printk("%d: %s\n", husos[i].id, husos[i].city);
+}
 
 void read_time(time_t * tp) {
     Atomic();
@@ -158,7 +207,7 @@ int pow(int b, int e) {
 }
 
 char * asctime(char * str_time, const time_t * tp, int fmt) {
-    // Thu May 29 11:35:33 2014
+    // Thu May 29 11:35:33 ART 2014
     char time[9];
     int wday, mon;
     char day[3];
@@ -176,8 +225,15 @@ char * asctime(char * str_time, const time_t * tp, int fmt) {
     day[2] = 0;
     strcat(str_time, day);
     strcat(str_time, " ");
-    time[0] = ((tp->tm_hour & 0xF0) >> 4) + '0';
-    time[1] = ((tp->tm_hour & 0x0F)) + '0';
+    
+    int d = ((tp->tm_hour & 0xF0) >> 4);
+    int u = ((tp->tm_hour & 0x0F));
+    int h = d * 10 + u;
+    h = h - husos[DEFAULT_HUSO - 1].diff + husos[currentHuso - 1].diff ;
+    if(fmt12 && h >= 12)
+        h = h - 12;
+    time[0] = h/10 + '0';
+    time[1] = h%10 + '0';
     time[2] = ':';
     time[3] = ((tp->tm_min & 0xF0) >> 4) + '0';
     time[4] = ((tp->tm_min & 0x0F)) + '0';
@@ -186,6 +242,8 @@ char * asctime(char * str_time, const time_t * tp, int fmt) {
     time[7] = ((tp->tm_sec & 0x0F)) + '0';
     time[8] = 0;
     strcat(str_time, time);
+    strcat(str_time, " ");
+    strcat(str_time, husos[currentHuso - 1].code);
     strcat(str_time, " ");
     if(fmt) {
         year[0] = ((tp->tm_year & 0xF0) >> 4) + '0';
@@ -213,12 +271,10 @@ int time_main(int argc, char * argv[]) {
             }
         }
         if(!strcmp(argv[1], "-f12")) {
-            set_register_bit(0x0B, 1, 0);
-            return 0;
+            fmt12 = true;
         }
         if(!strcmp(argv[1], "-f24")) {
-            set_register_bit(0x0B, 1, 1);
-            return 0;
+            fmt12 = false;
         }
         if(!strcmp(argv[1], "-alarm")) {
             if(argc == 7) {
@@ -257,6 +313,18 @@ int time_main(int argc, char * argv[]) {
                 printk("%s @ %s\n", a->name, asctime(timeString, &(a->date), 0));
             return 0;
         }
+        if(!strcmp(argv[1], "-gmt")) {
+            char c;
+            printHusos();
+            printk("\nIngrese el codigo: ");
+            mt_kbd_getch(&c);
+            printk("%c\n", c);
+            if(c - '0' >= 1 && c - '0' <= 9)
+                currentHuso = c - '0';
+            else
+                printk("Codigo Invalido.\n");
+        }
+
     }
     read_time(&t);
     printk("%s\n", asctime(timeString, &t, 1));
