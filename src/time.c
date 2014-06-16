@@ -298,7 +298,7 @@ int time_main(int argc, char * argv[]) {
             fmt12 = false;
         }
         if(!strcmp(argv[1], "-alarm")) {
-            if(argc == 7) {
+            if(argc == 8) {
                 if(alarms == NULL)
                     alarms = NewList(sizeof(alarm), (int(*)(void *, void *)) compAlarm);
                 time_t newAlarm;
@@ -310,6 +310,13 @@ int time_main(int argc, char * argv[]) {
                 alarm * first;
                 a.id = alarmCount++;
                 a.name = argv[6];
+                a.repeat = 0;
+                a.argv = Malloc(2 * sizeof(char *));
+                a.argv[0] = Malloc(strlen(argv[6] + 1));
+                strcpy(a.argv[0], argv[6]);
+                a.argv[1] = Malloc(strlen(argv[7] + 1));
+                strcpy(a.argv[1], argv[7]);
+                a.argc = 2;
                 a.date = newAlarm;
                 Insert(alarms, &a);
                 ToBegin(alarms);
@@ -320,6 +327,38 @@ int time_main(int argc, char * argv[]) {
                 mt_set_int_handler(8, alarm_handler);
                 return 0;
             }
+        }
+        if(!strcmp(argv[1], "-timer")) {
+           if(argc == 5) {
+                int secs;
+                if(alarms == NULL)
+                    alarms = NewList(sizeof(alarm), (int(*)(void *, void *)) compAlarm);
+                time_t newAlarm;
+                read_time(&newAlarm);
+                secs = atoi(argv[2]);
+                addSeconds(&newAlarm, secs);
+                alarm a;
+                alarm * first;
+                a.id = alarmCount++;
+                a.name = argv[3];
+                a.repeat = 1;
+                a.secs = secs;
+                a.argv = Malloc(2 * sizeof(char *));
+                a.argv[0] = Malloc(strlen(argv[3] + 1));
+                strcpy(a.argv[0], argv[3]);
+                a.argv[1] = Malloc(strlen(argv[4] + 1));
+                strcpy(a.argv[1], argv[4]);
+                a.argc = 2;
+                a.date = newAlarm;
+                Insert(alarms, &a);
+                ToBegin(alarms);
+                first = NextElement(alarms);
+                set_register_bit(0x0B, 5, 1);
+                set_alarm(&(first -> date));
+                mt_enable_irq(8);
+                mt_set_int_handler(8, alarm_handler);
+                return 0;
+           }
         }
         if(!strcmp(argv[1], "-l")) {
             alarm * a;
@@ -410,24 +449,44 @@ void set_alarm_wrapper(int hour, int min, int sec, int day) {
     set_alarm(&t);
 }
 
+void addSeconds(time_t * t, int secs) {
+    if(fromBCD(t ->tm_sec) + secs < 60) {
+        t ->tm_sec = toBCD(fromBCD(t ->tm_sec) + secs);
+    // } else if(fromBCD(t ->tm_min) + (secs / 60) < 60) {
+    //     t ->tm_sec = toBCD(fromBCD(t ->tm_sec) + (secs % 60);
+    //     t ->tm_min = toBCD(fromBCD(t ->tm_min) + secs / 60);
+    } else {
+        t ->tm_min = toBCD(fromBCD(t ->tm_min) + 1);
+        t ->tm_sec = toBCD(secs % 60);
+    }
+    return t;
+}
+
 void alarm_handler(unsigned irq_number) {
     struct cmdentry *cp;
     alarm * first;
+    alarm aux;
     int register_c;         
     /* Leo el registro C para aceptar futuras interrupciones */
     outb(0x70, 0x0C);
     register_c = inb(0x71);
+
+    // if(register_c & 0b00100000 == 0b00100000) {   /* Alarm Event Flag */
     printk("RING!\n");
     ToBegin(alarms);
     first = NextElement(alarms);
+    aux = * first;
+    if(aux.repeat) {
+        addSeconds(&(aux.date), aux.secs);
+        Insert(alarms, &aux);
+    }
     printk("%d: %s\n", first->id, first->name);
     /* aplicaciones */
     bool found = false;
     for ( cp = cmdtab ; cp->name ; cp++ )
-        if ( strcmp(first->name, cp->name) == 0 )
-        {
+        if ( strcmp(first->name, cp->name) == 0 ) {
             found = true;
-            int n = cp->func(1, NULL);
+            int n = cp->func(first->argc, first->argv);
             if ( n != 0 )
                 cprintk(LIGHTRED, BLACK, "Status: %d\n", n);
             break;
@@ -441,4 +500,5 @@ void alarm_handler(unsigned irq_number) {
         set_register_bit(0x0B, 5, 1); /* Habilito interrupcion de alarma. */
         set_alarm(&(first -> date));
     }
+    // }
 }

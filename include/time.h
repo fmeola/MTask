@@ -16,7 +16,11 @@ typedef struct {
 typedef struct {
 	int id;
 	char * name;
+    char * * argv;
+    int argc;
 	time_t date;
+    int repeat;
+    int secs;
 } alarm;
 
 int time_main(int argc, char * argv[]);
@@ -56,5 +60,6 @@ int clear_bit(int byte, int bit);
 int set_bit(int byte, int bit);
 void read_time(time_t * tp);
 void reset_time();
+void addSeconds(time_t * t, int secs);
 
 #endif
