@@ -19,7 +19,9 @@ typedef struct {
 	time_t date;
 } alarm;
 
-/* Guarda el tiempo en la estructura */
+int time_main(int argc, char * argv[]);
+
+/* Guarda el tiempo del RTC en la estructura */
 void time(time_t * tp);
 
 /* Convierte a una cadena de texto el tiempo */
@@ -28,24 +30,31 @@ char * asctime(char * str_time, const time_t * tp, int fmt);
 /* Alarm Handler */
 void alarm_handler(unsigned irq_number);
 
+/* Agenda una alarma */
 void set_alarm_wrapper(int hour, int min, int sec, int day);
-void set_time_wrapper(int hour, int min, int sec, int day, int mon, int year);
-int toBCD(int n);
-int time_main(int argc, char * argv[]);
-int pow(int b, int e);
-int clear_bit(int byte, int bit);
-int set_bit(int byte, int bit);
-void set_time_format(int fmt);
-void reset_time();
-void set_alarm(time_t * tp);
-void set_time(time_t * tp);
-void set_register_bit(int register_address, int bit, int set);
-void read_time(time_t * tp);
 
-int compAlarm(alarm *n, alarm *m);
-int fromBCD(int n) ;
+/* Setea la fecha y hora */
+void set_time_wrapper(int hour, int min, int sec, int day, int mon, int year);
+
+/* Muestra el mapa de husos horarios */
 void printHusos(void);
 
+/* Setea la variable de formato de 12 o 24 horas. */
+void set_time_format(int fmt);
 
+/* Funciones matematicas y de comparacion */
+int fromBCD(int n) ;
+int toBCD(int n);
+int pow(int b, int e);
+int compAlarm(alarm *n, alarm *m);
+
+/* Funciones de entrada y salida del RTC */
+void set_register_bit(int register_address, int bit, int set);
+void set_alarm(time_t * tp);
+void set_time(time_t * tp);
+int clear_bit(int byte, int bit);
+int set_bit(int byte, int bit);
+void read_time(time_t * tp);
+void reset_time();
 
 #endif

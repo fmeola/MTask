@@ -224,8 +224,7 @@ char * asctime(char * str_time, const time_t * tp, int fmt) {
     day[1] = ((tp->tm_mday & 0x0F)) + '0';
     day[2] = 0;
     strcat(str_time, day);
-    strcat(str_time, " ");
-    
+    strcat(str_time, " ");   
     int d = ((tp->tm_hour & 0xF0) >> 4);
     int u = ((tp->tm_hour & 0x0F));
     int h = d * 10 + u;
@@ -278,8 +277,6 @@ int time_main(int argc, char * argv[]) {
         }
         if(!strcmp(argv[1], "-alarm")) {
             if(argc == 7) {
-                //void (*f) (unsiged);
-                //f = alarm_handler;
                 if(alarms == NULL)
                     alarms = NewList(sizeof(alarm), (int(*)(void *, void *)) compAlarm);
                 time_t newAlarm;
@@ -309,8 +306,10 @@ int time_main(int argc, char * argv[]) {
                 return 0;
             }
             ToBegin(alarms);
-            while((a = NextElement(alarms)) != NULL)
-                printk("%s @ %s\n", a->name, asctime(timeString, &(a->date), 0));
+            while((a = NextElement(alarms)) != NULL) {
+				char auxString[24] = {0};
+                printk("%s @ %s\n", a->name, asctime(auxString, &(a->date), 0));
+			}
             return 0;
         }
         if(!strcmp(argv[1], "-gmt")) {
@@ -324,7 +323,17 @@ int time_main(int argc, char * argv[]) {
             else
                 printk("Codigo Invalido.\n");
         }
-
+		if(!strcmp(argv[1], "-help")) {
+			printk("Ayuda del comando date\n");
+			printk("-gmt Cambia la hora a un huso horario del mapa.\n");
+			printk("-f12 Cambia el formato a 12 horas.\n");
+			printk("-f24 Cambia el formato a 24 horas.\n");
+			printk("-l Lista las proximas alarmas agendadas.\n");
+			printk("-alarm [hh] [mm] [ss] [dd] [cmd]\n\t Agenda una alarma para lanzar el comando [cmd] a las hh:mm:ss del dia [dd] del mes actual.\n");
+			printk("-set [hh] [mm] [ss] [dd] [mm] [yy]\n\t Cambia la fecha y hora actual con yy desde el 2000.\n");
+			printk("-reset Setea la fecha y hora actual a las 00:00:00 1/1/2000.\n");
+			return 0;
+		}
     }
     read_time(&t);
     printk("%s\n", asctime(timeString, &t, 1));
@@ -350,7 +359,6 @@ int compAlarm(alarm *a1, alarm *a2) {
     return 0;
 }
 
-
 int toBCD(int n) {
     return ((n / 10) << 4)|(n% 10);
 }
@@ -367,7 +375,7 @@ void set_time_wrapper(int hour, int min, int sec, int day, int mon, int year) {
     t.tm_mday = toBCD(day);
     t.tm_mon = toBCD(mon - 1);
     t.tm_year = toBCD(year);
-    t.tm_wday = 0; // TODO Arreglar dia de la semana.
+    t.tm_wday = 0; // TODO Dia de la semana.
     set_time(&t);
 }
 
@@ -382,16 +390,12 @@ void set_alarm_wrapper(int hour, int min, int sec, int day) {
 
 void alarm_handler(unsigned irq_number) {
     struct cmdentry *cp;
-
     alarm * first;
-    int register_c;         /* Leo el registro C para aceptar futuras interrupciones */
     outb(0x70, 0x0C);
-    register_c = inb(0x71);
     printk("RING!\n");
     ToBegin(alarms);
     first = NextElement(alarms);
     printk("%d: %s\n", first->id, first->name);
-    
     /* aplicaciones */
     bool found = false;
     for ( cp = cmdtab ; cp->name ; cp++ )
@@ -403,10 +407,8 @@ void alarm_handler(unsigned irq_number) {
                 cprintk(LIGHTRED, BLACK, "Status: %d\n", n);
             break;
         }
-
     if ( !found )
         cprintk(LIGHTRED, BLACK, "Comando %s desconocido\n", first->name);
-
     Delete(alarms, first);
     ToBegin(alarms);
     first = NextElement(alarms);
@@ -415,7 +417,3 @@ void alarm_handler(unsigned irq_number) {
         set_alarm(&(first -> date));
     }
 }
-
-
-
-
