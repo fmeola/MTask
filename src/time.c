@@ -391,7 +391,10 @@ void set_alarm_wrapper(int hour, int min, int sec, int day) {
 void alarm_handler(unsigned irq_number) {
     struct cmdentry *cp;
     alarm * first;
+    int register_c;         
+    /* Leo el registro C para aceptar futuras interrupciones */
     outb(0x70, 0x0C);
+    register_c = inb(0x71);
     printk("RING!\n");
     ToBegin(alarms);
     first = NextElement(alarms);
