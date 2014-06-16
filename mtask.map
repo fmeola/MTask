@@ -187,7 +187,7 @@ LOAD obj/genlistADT.o
  *(.iplt)
  .iplt          0x0000000000000000        0x0 obj/kstart.o
 
-.text           0x0000000000100100     0x9dc2
+.text           0x0000000000100100     0x9eec
  *(.text.unlikely .text.*_unlikely .text.unlikely.*)
  *(.text.exit .text.exit.*)
  *(.text.startup .text.startup.*)
@@ -404,152 +404,152 @@ LOAD obj/genlistADT.o
                 0x000000000010873c                atomic_phil_main
  .text          0x00000000001088c5       0xf1 obj/divz.o
                 0x00000000001088ff                divz_main
- .text          0x00000000001089b6     0x115d obj/time.o
+ .text          0x00000000001089b6     0x1287 obj/time.o
                 0x00000000001089b6                printHusos
-                0x0000000000108a31                read_time
-                0x0000000000108b5b                set_register_bit
-                0x0000000000108bee                set_time
-                0x0000000000108d25                set_alarm
-                0x0000000000108dde                reset_time
-                0x0000000000108e2a                set_time_format
-                0x0000000000108ec1                set_bit
-                0x0000000000108edf                clear_bit
-                0x0000000000108f05                pow
-                0x0000000000108f36                asctime
-                0x00000000001091ee                time_main
-                0x0000000000109778                compAlarm
-                0x0000000000109863                toBCD
-                0x00000000001098ae                fromBCD
-                0x00000000001098d1                set_time_wrapper
-                0x0000000000109942                set_alarm_wrapper
-                0x000000000010998d                alarm_handler
- .text          0x0000000000109b13      0x3af obj/genlistADT.o
-                0x0000000000109b13                NewList
-                0x0000000000109b66                ListIsEmpty
-                0x0000000000109b79                ToBegin
-                0x0000000000109b8a                NextElement
-                0x0000000000109bf4                ElementBelongs
-                0x0000000000109d44                Insert
-                0x0000000000109e2f                Delete
-                0x0000000000109e6c                Size
-                0x0000000000109e77                FreeList
+                0x0000000000108b1c                read_time
+                0x0000000000108c46                set_register_bit
+                0x0000000000108cd9                set_time
+                0x0000000000108e10                set_alarm
+                0x0000000000108ec9                reset_time
+                0x0000000000108f15                set_time_format
+                0x0000000000108fac                set_bit
+                0x0000000000108fca                clear_bit
+                0x0000000000108ff0                pow
+                0x0000000000109021                asctime
+                0x0000000000109308                time_main
+                0x00000000001098a2                compAlarm
+                0x000000000010998d                toBCD
+                0x00000000001099d8                fromBCD
+                0x00000000001099fb                set_time_wrapper
+                0x0000000000109a6c                set_alarm_wrapper
+                0x0000000000109ab7                alarm_handler
+ .text          0x0000000000109c3d      0x3af obj/genlistADT.o
+                0x0000000000109c3d                NewList
+                0x0000000000109c90                ListIsEmpty
+                0x0000000000109ca3                ToBegin
+                0x0000000000109cb4                NextElement
+                0x0000000000109d1e                ElementBelongs
+                0x0000000000109e6e                Insert
+                0x0000000000109f59                Delete
+                0x0000000000109f96                Size
+                0x0000000000109fa1                FreeList
  *(.gnu.warning)
 
 .fini
  *(SORT(.fini))
-                0x0000000000109ec2                PROVIDE (__etext, .)
-                0x0000000000109ec2                PROVIDE (_etext, .)
-                0x0000000000109ec2                PROVIDE (etext, .)
+                0x0000000000109fec                PROVIDE (__etext, .)
+                0x0000000000109fec                PROVIDE (_etext, .)
+                0x0000000000109fec                PROVIDE (etext, .)
 
-.rodata         0x0000000000109ee0     0x1136
+.rodata         0x000000000010a000     0x1162
  *(.rodata .rodata.* .gnu.linkonce.r.*)
- .rodata        0x0000000000109ee0       0xd8 obj/kernel.o
- .rodata        0x0000000000109fb8       0x55 obj/irq.o
- *fill*         0x000000000010a00d        0x3 
- .rodata        0x000000000010a010      0x188 obj/sprintf.o
- .rodata        0x000000000010a198       0x29 obj/mutex.o
- *fill*         0x000000000010a1c1        0x3 
- .rodata        0x000000000010a1c4       0xff obj/monitor.o
- .rodata        0x000000000010a2c3        0xe obj/pipe.o
- *fill*         0x000000000010a2d1        0x3 
- .rodata        0x000000000010a2d4       0x2f obj/msgqueue.o
- *fill*         0x000000000010a303        0x1 
- .rodata        0x000000000010a304       0x4e obj/filo.o
- *fill*         0x000000000010a352        0x2 
- .rodata        0x000000000010a354       0x4e obj/sfilo.o
- *fill*         0x000000000010a3a2        0x2 
- .rodata        0x000000000010a3a4       0x4e obj/xfilo.o
- .rodata        0x000000000010a3f2       0x2e obj/keyboard.o
- .rodata        0x000000000010a420        0xf obj/getline.o
- .rodata        0x000000000010a42f       0xc4 obj/shell.o
- .rodata        0x000000000010a4f3        0x1 obj/split.o
- .rodata        0x000000000010a4f4       0x62 obj/setkb.o
- *fill*         0x000000000010a556        0x2 
- .rodata        0x000000000010a558       0x88 obj/camino.o
- .rodata        0x000000000010a5e0       0xa0 obj/camino_ns.o
- .rodata        0x000000000010a680      0x116 obj/prodcons.o
- *fill*         0x000000000010a796        0x2 
- .rodata        0x000000000010a798       0x4e obj/afilo.o
- *fill*         0x000000000010a7e6        0x2 
- .rodata        0x000000000010a7e8       0x6b obj/divz.o
- *fill*         0x000000000010a853        0xd 
- .rodata        0x000000000010a860      0x799 obj/time.o
-                0x000000000010ace0                husos
- .rodata        0x000000000010aff9       0x1d obj/genlistADT.o
+ .rodata        0x000000000010a000       0xd8 obj/kernel.o
+ .rodata        0x000000000010a0d8       0x55 obj/irq.o
+ *fill*         0x000000000010a12d        0x3 
+ .rodata        0x000000000010a130      0x188 obj/sprintf.o
+ .rodata        0x000000000010a2b8       0x29 obj/mutex.o
+ *fill*         0x000000000010a2e1        0x3 
+ .rodata        0x000000000010a2e4       0xff obj/monitor.o
+ .rodata        0x000000000010a3e3        0xe obj/pipe.o
+ *fill*         0x000000000010a3f1        0x3 
+ .rodata        0x000000000010a3f4       0x2f obj/msgqueue.o
+ *fill*         0x000000000010a423        0x1 
+ .rodata        0x000000000010a424       0x4e obj/filo.o
+ *fill*         0x000000000010a472        0x2 
+ .rodata        0x000000000010a474       0x4e obj/sfilo.o
+ *fill*         0x000000000010a4c2        0x2 
+ .rodata        0x000000000010a4c4       0x4e obj/xfilo.o
+ .rodata        0x000000000010a512       0x2e obj/keyboard.o
+ .rodata        0x000000000010a540        0xf obj/getline.o
+ .rodata        0x000000000010a54f       0xc4 obj/shell.o
+ .rodata        0x000000000010a613        0x1 obj/split.o
+ .rodata        0x000000000010a614       0x62 obj/setkb.o
+ *fill*         0x000000000010a676        0x2 
+ .rodata        0x000000000010a678       0x88 obj/camino.o
+ .rodata        0x000000000010a700       0xa0 obj/camino_ns.o
+ .rodata        0x000000000010a7a0      0x116 obj/prodcons.o
+ *fill*         0x000000000010a8b6        0x2 
+ .rodata        0x000000000010a8b8       0x4e obj/afilo.o
+ *fill*         0x000000000010a906        0x2 
+ .rodata        0x000000000010a908       0x6b obj/divz.o
+ *fill*         0x000000000010a973        0xd 
+ .rodata        0x000000000010a980      0x7c5 obj/time.o
+                0x000000000010ae20                husos
+ .rodata        0x000000000010b145       0x1d obj/genlistADT.o
 
 .rodata1
  *(.rodata1)
 
-.eh_frame_hdr   0x000000000010b018      0x9c4
+.eh_frame_hdr   0x000000000010b164      0x9c4
  *(.eh_frame_hdr)
- .eh_frame_hdr  0x000000000010b018      0x9c4 obj/kernel.o
+ .eh_frame_hdr  0x000000000010b164      0x9c4 obj/kernel.o
 
-.eh_frame       0x000000000010b9dc     0x27c4
+.eh_frame       0x000000000010bb28     0x27c4
  *(.eh_frame)
- .eh_frame      0x000000000010b9dc      0x58c obj/kernel.o
- .eh_frame      0x000000000010bf68       0x60 obj/gdt_idt.o
+ .eh_frame      0x000000000010bb28      0x58c obj/kernel.o
+ .eh_frame      0x000000000010c0b4       0x60 obj/gdt_idt.o
                                          0x78 (tamaño antes de la relajación)
- .eh_frame      0x000000000010bfc8      0x140 obj/irq.o
+ .eh_frame      0x000000000010c114      0x140 obj/irq.o
                                         0x158 (tamaño antes de la relajación)
- .eh_frame      0x000000000010c108      0x244 obj/string.o
+ .eh_frame      0x000000000010c254      0x244 obj/string.o
                                         0x25c (tamaño antes de la relajación)
- .eh_frame      0x000000000010c34c      0x1ec obj/sprintf.o
+ .eh_frame      0x000000000010c498      0x1ec obj/sprintf.o
                                         0x204 (tamaño antes de la relajación)
- .eh_frame      0x000000000010c538       0x60 obj/malloc.o
+ .eh_frame      0x000000000010c684       0x60 obj/malloc.o
                                          0x78 (tamaño antes de la relajación)
- .eh_frame      0x000000000010c598      0x2a8 obj/cons.o
+ .eh_frame      0x000000000010c6e4      0x2a8 obj/cons.o
                                         0x2c0 (tamaño antes de la relajación)
- .eh_frame      0x000000000010c840       0x20 obj/timer.o
+ .eh_frame      0x000000000010c98c       0x20 obj/timer.o
                                          0x38 (tamaño antes de la relajación)
- .eh_frame      0x000000000010c860      0x100 obj/queue.o
+ .eh_frame      0x000000000010c9ac      0x100 obj/queue.o
                                         0x118 (tamaño antes de la relajación)
- .eh_frame      0x000000000010c960       0x44 obj/math.o
+ .eh_frame      0x000000000010caac       0x44 obj/math.o
                                          0x5c (tamaño antes de la relajación)
- .eh_frame      0x000000000010c9a4      0x100 obj/sem.o
+ .eh_frame      0x000000000010caf0      0x100 obj/sem.o
                                         0x118 (tamaño antes de la relajación)
- .eh_frame      0x000000000010caa4       0xc0 obj/mutex.o
+ .eh_frame      0x000000000010cbf0       0xc0 obj/mutex.o
                                          0xd8 (tamaño antes de la relajación)
- .eh_frame      0x000000000010cb64      0x180 obj/monitor.o
+ .eh_frame      0x000000000010ccb0      0x180 obj/monitor.o
                                         0x198 (tamaño antes de la relajación)
- .eh_frame      0x000000000010cce4      0x128 obj/pipe.o
+ .eh_frame      0x000000000010ce30      0x128 obj/pipe.o
                                         0x140 (tamaño antes de la relajación)
- .eh_frame      0x000000000010ce0c      0x160 obj/msgqueue.o
+ .eh_frame      0x000000000010cf58      0x160 obj/msgqueue.o
                                         0x178 (tamaño antes de la relajación)
- .eh_frame      0x000000000010cf6c       0x60 obj/rand.o
+ .eh_frame      0x000000000010d0b8       0x60 obj/rand.o
                                          0x78 (tamaño antes de la relajación)
- .eh_frame      0x000000000010cfcc      0x184 obj/filo.o
+ .eh_frame      0x000000000010d118      0x184 obj/filo.o
                                         0x19c (tamaño antes de la relajación)
- .eh_frame      0x000000000010d150      0x164 obj/sfilo.o
+ .eh_frame      0x000000000010d29c      0x164 obj/sfilo.o
                                         0x17c (tamaño antes de la relajación)
- .eh_frame      0x000000000010d2b4      0x184 obj/xfilo.o
+ .eh_frame      0x000000000010d400      0x184 obj/xfilo.o
                                         0x19c (tamaño antes de la relajación)
- .eh_frame      0x000000000010d438      0x15c obj/keyboard.o
+ .eh_frame      0x000000000010d584      0x15c obj/keyboard.o
                                         0x174 (tamaño antes de la relajación)
- .eh_frame      0x000000000010d594       0x60 obj/printk.o
+ .eh_frame      0x000000000010d6e0       0x60 obj/printk.o
                                          0x78 (tamaño antes de la relajación)
- .eh_frame      0x000000000010d5f4       0x20 obj/getline.o
+ .eh_frame      0x000000000010d740       0x20 obj/getline.o
                                          0x38 (tamaño antes de la relajación)
- .eh_frame      0x000000000010d614       0x20 obj/shell.o
+ .eh_frame      0x000000000010d760       0x20 obj/shell.o
                                          0x38 (tamaño antes de la relajación)
- .eh_frame      0x000000000010d634       0xc0 obj/split.o
+ .eh_frame      0x000000000010d780       0xc0 obj/split.o
                                          0xd8 (tamaño antes de la relajación)
- .eh_frame      0x000000000010d6f4       0x20 obj/setkb.o
+ .eh_frame      0x000000000010d840       0x20 obj/setkb.o
                                          0x38 (tamaño antes de la relajación)
- .eh_frame      0x000000000010d714      0x1fc obj/camino.o
+ .eh_frame      0x000000000010d860      0x1fc obj/camino.o
                                         0x214 (tamaño antes de la relajación)
- .eh_frame      0x000000000010d910      0x1bc obj/camino_ns.o
+ .eh_frame      0x000000000010da5c      0x1bc obj/camino_ns.o
                                         0x1d4 (tamaño antes de la relajación)
- .eh_frame      0x000000000010dacc       0x20 obj/atoi.o
+ .eh_frame      0x000000000010dc18       0x20 obj/atoi.o
                                          0x38 (tamaño antes de la relajación)
- .eh_frame      0x000000000010daec      0x114 obj/prodcons.o
+ .eh_frame      0x000000000010dc38      0x114 obj/prodcons.o
                                         0x12c (tamaño antes de la relajación)
- .eh_frame      0x000000000010dc00      0x184 obj/afilo.o
+ .eh_frame      0x000000000010dd4c      0x184 obj/afilo.o
                                         0x19c (tamaño antes de la relajación)
- .eh_frame      0x000000000010dd84       0x60 obj/divz.o
+ .eh_frame      0x000000000010ded0       0x60 obj/divz.o
                                          0x78 (tamaño antes de la relajación)
- .eh_frame      0x000000000010dde4      0x258 obj/time.o
+ .eh_frame      0x000000000010df30      0x258 obj/time.o
                                         0x270 (tamaño antes de la relajación)
- .eh_frame      0x000000000010e03c      0x164 obj/genlistADT.o
+ .eh_frame      0x000000000010e188      0x164 obj/genlistADT.o
                                         0x17c (tamaño antes de la relajación)
 
 .gcc_except_table
@@ -557,7 +557,7 @@ LOAD obj/genlistADT.o
 
 .exception_ranges
  *(.exception_ranges .exception_ranges*)
-                0x000000000010e1a0                . = (ALIGN (0x1000) - ((0x1000 - .) & 0xfff))
+                0x000000000010e2ec                . = (ALIGN (0x1000) - ((0x1000 - .) & 0xfff))
                 0x0000000000110000                . = DATA_SEGMENT_ALIGN (0x1000, 0x1000)
 
 .eh_frame

@@ -78,15 +78,15 @@ typedef struct
 
 const huso husos[] =
 {
-    { 1, "Buenos Aires", "ART",  -3 },
+    { 1, "Buenos Aires  ", "ART",  -3 },
     { 2, "Rio de Janeiro", "BRT", -3 },
-    { 3, "Mexico DF", "CDT",-6 },
-    { 4, "San Francisco", "PDT",-8 },
-    { 5, "Washington DC", "EDT",-5 },
-    { 6, "Londres", "BST",0 },
-    { 7, "Sidney", "MDT",+10 },
-    { 8, "Tokio", "JST",+9 },
-    { 9, "Moscu", "MSK",+4 }
+    { 3, "Mexico DF     ", "CDT",-6 },
+    { 4, "San Francisco ", "PDT",-8 },
+    { 5, "Washington DC ", "EDT",-5 },
+    { 6, "Londres       ", "BST",0 },
+    { 7, "Sidney        ", "MDT",+10 },
+    { 8, "Tokio         ", "JST",+9 },
+    { 9, "Moscu         ", "MSK",+4 }
 };
 
 static bool fmt12 = false;
@@ -96,10 +96,20 @@ static int alarmCount = 0;
 
 void printHusos(void) {
     int i;
+	time_t aux;
+	read_time(&aux);
+	int realHuso = currentHuso;
     for(i = 0; i < sizeof(map)/sizeof(map[0]); i++)
         printk("%s", map[i]);
-    for(i = 0; i < sizeof(husos)/sizeof(huso); i++)
-        printk("%d: %s\n", husos[i].id, husos[i].city);
+    for(i = 0; i < sizeof(husos)/sizeof(huso); i++) {
+		char auxString[20] = {0};
+		currentHuso = i+1;
+		if(currentHuso == realHuso)
+			cprintk(LIGHTBLUE, BLACK, "%d: %s\t %s\n", husos[i].id, husos[i].city, asctime(auxString, &aux, 0, 0));
+		else
+        	printk("%d: %s\t %s\n", husos[i].id, husos[i].city, asctime(auxString, &aux, 0, 0));
+	}
+	currentHuso = realHuso;
 }
 
 void read_time(time_t * tp) {
@@ -206,7 +216,7 @@ int pow(int b, int e) {
     return res;
 }
 
-char * asctime(char * str_time, const time_t * tp, int fmt) {
+char * asctime(char * str_time, const time_t * tp, int fmt, int showday) {
     // Thu May 29 11:35:33 ART 2014
     char time[9];
     int wday, mon;
@@ -220,16 +230,18 @@ char * asctime(char * str_time, const time_t * tp, int fmt) {
         strcat(str_time, _months_abbrev[mon]);
         strcat(str_time, " ");
     }
-    day[0] = ((tp->tm_mday & 0xF0) >> 4) + '0';
-    day[1] = ((tp->tm_mday & 0x0F)) + '0';
-    day[2] = 0;
-    strcat(str_time, day);
-    strcat(str_time, " ");   
+	if(showday) {
+    	day[0] = ((tp->tm_mday & 0xF0) >> 4) + '0';
+   		day[1] = ((tp->tm_mday & 0x0F)) + '0';
+    	day[2] = 0;
+		strcat(str_time, day);
+		strcat(str_time, " ");  
+	}
     int d = ((tp->tm_hour & 0xF0) >> 4);
     int u = ((tp->tm_hour & 0x0F));
     int h = d * 10 + u;
-    h = h - husos[DEFAULT_HUSO - 1].diff + husos[currentHuso - 1].diff ;
-    if(fmt12 && h >= 12)
+    h = (h - husos[DEFAULT_HUSO - 1].diff + husos[currentHuso - 1].diff) % 24;
+    if(fmt12 && h > 12)
         h = h - 12;
     time[0] = h/10 + '0';
     time[1] = h%10 + '0';
@@ -308,7 +320,7 @@ int time_main(int argc, char * argv[]) {
             ToBegin(alarms);
             while((a = NextElement(alarms)) != NULL) {
 				char auxString[24] = {0};
-                printk("%s @ %s\n", a->name, asctime(auxString, &(a->date), 0));
+                printk("%s @ %s\n", a->name, asctime(auxString, &(a->date), 0, 1));
 			}
             return 0;
         }
@@ -336,7 +348,7 @@ int time_main(int argc, char * argv[]) {
 		}
     }
     read_time(&t);
-    printk("%s\n", asctime(timeString, &t, 1));
+    printk("%s\n", asctime(timeString, &t, 1, 1));
     return 0;
 }
 

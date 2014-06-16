@@ -36,6 +36,12 @@ void set_alarm_wrapper(int hour, int min, int sec, int day);
 /* Setea la fecha y hora */
 void set_time_wrapper(int hour, int min, int sec, int day, int mon, int year);
 
+/* Muestra el mapa de husos horarios */
+void printHusos(void);
+
+/* Setea la variable de formato de 12 o 24 horas. */
+void set_time_format(int fmt);
+
 /* Funciones matematicas y de comparacion */
 int fromBCD(int n) ;
 int toBCD(int n);
@@ -48,15 +54,7 @@ void set_alarm(time_t * tp);
 void set_time(time_t * tp);
 int clear_bit(int byte, int bit);
 int set_bit(int byte, int bit);
-
-/* Muestra el mapa de husos horarios */
-void printHusos(void);
-
-/* Setea la variable de formato de 12 o 24 horas. */
-void set_time_format(int fmt);
-
-void reset_time();
-
 void read_time(time_t * tp);
+void reset_time();
 
 #endif
