@@ -329,7 +329,7 @@ int time_main(int argc, char * argv[]) {
             }
         }
         if(!strcmp(argv[1], "-timer")) {
-           if(argc == 5) {
+           if(argc >= 3) {
                 int secs;
                 if(alarms == NULL)
                     alarms = NewList(sizeof(alarm), (int(*)(void *, void *)) compAlarm);
@@ -343,12 +343,25 @@ int time_main(int argc, char * argv[]) {
                 a.name = argv[3];
                 a.repeat = 1;
                 a.secs = secs;
-                a.argv = Malloc(2 * sizeof(char *));
-                a.argv[0] = Malloc(strlen(argv[3] + 1));
-                strcpy(a.argv[0], argv[3]);
-                a.argv[1] = Malloc(strlen(argv[4] + 1));
-                strcpy(a.argv[1], argv[4]);
-                a.argc = 2;
+                if(argc == 5) { // Un comando y un argumento
+                    a.argv = Malloc(2 * sizeof(char *));
+                    a.argv[0] = Malloc(strlen(argv[3] + 1));
+                    strcpy(a.argv[0], argv[3]);
+                    a.argv[1] = Malloc(strlen(argv[4] + 1));
+                    strcpy(a.argv[1], argv[4]);
+                    a.argc = 2;
+                } else if(argc == 4) { // Un comando sin argumentos
+                    a.argv = Malloc(1 * sizeof(char *));
+                    a.argv[0] = Malloc(strlen(argv[3] + 1));
+                    strcpy(a.argv[0], argv[3]);
+                    a.argc = 1;
+                    } else if(argc == 3) { // Alarma sin comando, solo Ring
+                        a.argv = NULL;
+                        a.argc = 0;
+                            } else {
+                                cprintk(LIGHTRED, BLACK, "Comando invalido.\n");
+                                return 0;
+                }
                 a.date = newAlarm;
                 Insert(alarms, &a);
                 ToBegin(alarms);
@@ -358,7 +371,7 @@ int time_main(int argc, char * argv[]) {
                 mt_enable_irq(8);
                 mt_set_int_handler(8, alarm_handler);
                 return 0;
-           }
+            }
         }
         if(!strcmp(argv[1], "-rm")) {
             alarm * a;
@@ -394,6 +407,8 @@ int time_main(int argc, char * argv[]) {
             ToBegin(alarms);
             while((a = NextElement(alarms)) != NULL) {
 				char auxString[24] = {0};
+                if (a->name == NULL)
+                    a->name = "Alarm";
                 printk("%s @ %s\n", a->name, asctime(auxString, &(a->date), 0, 1));
 			}
             return 0;
@@ -519,8 +534,8 @@ void alarm_handler(unsigned irq_number) {
                 cprintk(LIGHTRED, BLACK, "Status: %d\n", n);
             break;
         }
-    if ( !found )
-        cprintk(LIGHTRED, BLACK, "Comando %s desconocido\n", first->name);
+    //if ( !found )
+    //    cprintk(LIGHTRED, BLACK, "Comando %s desconocido\n", first->name);
     Delete(alarms, first);
     ToBegin(alarms);
     first = NextElement(alarms);
