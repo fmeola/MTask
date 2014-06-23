@@ -332,6 +332,12 @@ int time_main(int argc, char * argv[]) {
                 }
                 a.date = newAlarm;
                 Insert(alarms, &a);
+                if(argc >= 8) {
+                    Free(a.argv[1]);
+                } else if (argc >= 7) {
+                    Free(a.argv[0]);
+                }
+                Free(a.argv);
                 ToBegin(alarms);
                 first = NextElement(alarms);
                 set_register_bit(0x0B, 5, 1);
@@ -377,6 +383,12 @@ int time_main(int argc, char * argv[]) {
                 }
                 a.date = newAlarm;
                 Insert(alarms, &a);
+                if(argc >= 5) {
+                    Free(a.argv[1]);
+                } else if (argc >= 4) {
+                    Free(a.argv[0]);
+                }
+                Free(a.argv);
                 ToBegin(alarms);
                 first = NextElement(alarms);
                 set_register_bit(0x0B, 5, 1);
@@ -413,7 +425,7 @@ int time_main(int argc, char * argv[]) {
             printk("%c\n", c);
             if(c - '0' >= 1 && c - '0' <= Size(alarms)) {
                 Delete(alarms, all[c-'0'-1]) ;
-                printk("Alarma eliminada.\n");
+                printk("Alarma eliminada.\n\n");
 			}
             else
                 printk("Numero Invalido.\n");
@@ -437,6 +449,7 @@ int time_main(int argc, char * argv[]) {
                     repeat = "Yes";
                 printk("%s\t%s\t%s\n", a->name, repeat, asctime(auxString, &(a->date), 0, 1));
 			}
+            printk("\n");
             return 0;
         }
         if(!strcmp(argv[1], "-gmt")) {
