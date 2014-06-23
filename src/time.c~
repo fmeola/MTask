@@ -298,7 +298,7 @@ int time_main(int argc, char * argv[]) {
             fmt12 = false;
         }
         if(!strcmp(argv[1], "-alarm")) {
-            if(argc == 8) {
+            if(argc >= 6) {
                 if(alarms == NULL)
                     alarms = NewList(sizeof(alarm), (int(*)(void *, void *)) compAlarm);
                 time_t newAlarm;
@@ -311,12 +311,25 @@ int time_main(int argc, char * argv[]) {
                 a.id = alarmCount++;
                 a.name = argv[6];
                 a.repeat = 0;
-                a.argv = Malloc(2 * sizeof(char *));
-                a.argv[0] = Malloc(strlen(argv[6] + 1));
-                strcpy(a.argv[0], argv[6]);
-                a.argv[1] = Malloc(strlen(argv[7] + 1));
-                strcpy(a.argv[1], argv[7]);
-                a.argc = 2;
+                if(argc == 8) { // Alarma con comando y argumento.
+                    a.argv = Malloc(2 * sizeof(char *));
+                    a.argv[0] = Malloc(strlen(argv[6] + 1));
+                    strcpy(a.argv[0], argv[6]);
+                    a.argv[1] = Malloc(strlen(argv[7] + 1));
+                    strcpy(a.argv[1], argv[7]);
+                    a.argc = 2;
+                } else if (argc == 7) { // Alarma con comando sin argumentos.
+                    a.argv = Malloc(1 * sizeof(char *));
+                    a.argv[0] = Malloc(strlen(argv[6] + 1));
+                    strcpy(a.argv[0], argv[6]);
+                    a.argc = 1;
+                } else if (argc == 6) { // Alarma sin comando, solor Ring.
+                    a.argv = NULL;
+                    a.argc = 0;
+                } else {
+                    cprintk(LIGHTRED, BLACK, "Comando invalido.\n");
+                    return 0;
+                }
                 a.date = newAlarm;
                 Insert(alarms, &a);
                 ToBegin(alarms);
@@ -355,12 +368,12 @@ int time_main(int argc, char * argv[]) {
                     a.argv[0] = Malloc(strlen(argv[3] + 1));
                     strcpy(a.argv[0], argv[3]);
                     a.argc = 1;
-                    } else if(argc == 3) { // Alarma sin comando, solo Ring
-                        a.argv = NULL;
-                        a.argc = 0;
-                            } else {
-                                cprintk(LIGHTRED, BLACK, "Comando invalido.\n");
-                                return 0;
+                } else if(argc == 3) { // Alarma sin comando, solo Ring
+                    a.argv = NULL;
+                    a.argc = 0;
+                } else {
+                    cprintk(LIGHTRED, BLACK, "Comando invalido.\n");
+                    return 0;
                 }
                 a.date = newAlarm;
                 Insert(alarms, &a);
@@ -383,9 +396,16 @@ int time_main(int argc, char * argv[]) {
                 return 0;
             }
             ToBegin(alarms);
+            printk("num\tcmd\trepeat\ttime\n");
+            cprintk(LIGHTBLUE,BLACK,"----------------------------------------\n");
             while((a = NextElement(alarms)) != NULL) {
 				char auxString[24] = {0};
-                printk("%s @ %s\n", a->name, asctime(auxString, &(a->date), 0, 1));
+                char * repeat = "No";
+                if (a->name == NULL)
+                    a->name = "Alarm";
+                if (a->repeat)
+                    repeat = "Yes";
+                printk("%d\t%s\t%s\t%s\n", i+1, a->name, repeat, asctime(auxString, &(a->date), 0, 1));
                 all[i++] = a;
 			}
             printk("\nIngrese el numero de la alarma a eliminar: ");
@@ -393,6 +413,7 @@ int time_main(int argc, char * argv[]) {
             printk("%c\n", c);
             if(c - '0' >= 1 && c - '0' <= Size(alarms)) {
                 Delete(alarms, all[c-'0'-1]) ;
+                printk("Alarma eliminada.\n");
 			}
             else
                 printk("Numero Invalido.\n");
@@ -405,11 +426,16 @@ int time_main(int argc, char * argv[]) {
                 return 0;
             }
             ToBegin(alarms);
+            printk("cmd\trepeat\ttime\n");
+            cprintk(LIGHTBLUE,BLACK,"--------------------------------\n");
             while((a = NextElement(alarms)) != NULL) {
 				char auxString[24] = {0};
+                char * repeat = "No";
                 if (a->name == NULL)
-                    a->name = "None";
-                printk("%s @ %s\n", a->name, asctime(auxString, &(a->date), 0, 1));
+                    a->name = "Alarm";
+                if (a->repeat)
+                    repeat = "Yes";
+                printk("%s\t%s\t%s\n", a->name, repeat, asctime(auxString, &(a->date), 0, 1));
 			}
             return 0;
         }
@@ -509,13 +535,13 @@ void alarm_handler(unsigned irq_number) {
     alarm * first;
     alarm aux;
     int register_c;         
-    /* Leo el registro C para aceptar futuras interrupciones */
+    // Leo el registro C para aceptar futuras interrupciones
     outb(0x70, 0x0C);
     register_c = inb(0x71);
     if(ListIsEmpty(alarms))
         return 0;
     // if(register_c & 0b00100000 == 0b00100000) {   /* Alarm Event Flag */
-    printk("RING!\n");
+    cprintk(YELLOW, BLACK, "RING!\n");
     ToBegin(alarms);
     first = NextElement(alarms);
     aux = * first;
@@ -523,10 +549,11 @@ void alarm_handler(unsigned irq_number) {
         addSeconds(&(aux.date), aux.secs);
         Insert(alarms, &aux);
     }
-    printk("%d: %s\n", first->id, first->name);
-    /* aplicaciones */
+    if(first->name != NULL)
+        printk("%d: %s\n", first->id, first->name);
+    // Ejecución del comando agendado.
     bool found = false;
-    for ( cp = cmdtab ; cp->name ; cp++ )
+    for ( cp = cmdtab ; cp->name ; cp++ ) {
         if ( strcmp(first->name, cp->name) == 0 ) {
             found = true;
             int n = cp->func(first->argc, first->argv);
@@ -534,14 +561,13 @@ void alarm_handler(unsigned irq_number) {
                 cprintk(LIGHTRED, BLACK, "Status: %d\n", n);
             break;
         }
-    //if ( !found )
-    //    cprintk(LIGHTRED, BLACK, "Comando %s desconocido\n", first->name);
+    }
     Delete(alarms, first);
     ToBegin(alarms);
     first = NextElement(alarms);
     if(first != NULL) {
-        set_register_bit(0x0B, 5, 1); /* Habilito interrupcion de alarma. */
+        // Habilito la interrupcion de alarma.
+        set_register_bit(0x0B, 5, 1); 
         set_alarm(&(first -> date));
     }
-    // }
 }
