@@ -360,6 +360,31 @@ int time_main(int argc, char * argv[]) {
                 return 0;
            }
         }
+        if(!strcmp(argv[1], "-rm")) {
+            alarm * a;
+            alarm * all[10] = {0};
+            char c;
+            int i = 0;
+            if(alarms == NULL || ListIsEmpty(alarms)) {
+                cprintk(LIGHTRED, BLACK, "No hay alarmas.\n");
+                return 0;
+            }
+            ToBegin(alarms);
+            while((a = NextElement(alarms)) != NULL) {
+				char auxString[24] = {0};
+                printk("%s @ %s\n", a->name, asctime(auxString, &(a->date), 0, 1));
+                all[i++] = a;
+			}
+            printk("\nIngrese el numero de la alarma a eliminar: ");
+            mt_kbd_getch(&c);
+            printk("%c\n", c);
+            if(c - '0' >= 1 && c - '0' <= Size(alarms)) {
+                Delete(alarms, all[c-'0'-1]) ;
+			}
+            else
+                printk("Numero Invalido.\n");
+            return 0;
+        }
         if(!strcmp(argv[1], "-l")) {
             alarm * a;
             if(alarms == NULL || ListIsEmpty(alarms)) {
@@ -391,7 +416,9 @@ int time_main(int argc, char * argv[]) {
 			printk("-f24 Cambia el formato a 24 horas.\n");
 			printk("-l Lista las proximas alarmas agendadas.\n");
 			printk("-alarm [hh] [mm] [ss] [dd] [cmd]\n\t Agenda una alarma para lanzar el comando [cmd] a las hh:mm:ss del dia [dd] del mes actual.\n");
+			printk("-rm \n\t Elimina una alarma ya agendada.\n");
 			printk("-set [hh] [mm] [ss] [dd] [mm] [yy]\n\t Cambia la fecha y hora actual con yy desde el 2000.\n");
+			printk("-timer [seg] [cmd] [args]\n\t Agenda una alarma repetitiva para lanzar el comando [cmd] cada [seg] segundos con los argumentos [cmd].\n");
 			printk("-reset Setea la fecha y hora actual a las 00:00:00 1/1/2000.\n");
 			return 0;
 		}
@@ -470,7 +497,8 @@ void alarm_handler(unsigned irq_number) {
     /* Leo el registro C para aceptar futuras interrupciones */
     outb(0x70, 0x0C);
     register_c = inb(0x71);
-
+    if(ListIsEmpty(alarms))
+        return 0;
     // if(register_c & 0b00100000 == 0b00100000) {   /* Alarm Event Flag */
     printk("RING!\n");
     ToBegin(alarms);
